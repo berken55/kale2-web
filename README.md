@@ -10,8 +10,26 @@ Metin2 tarzı bir MMORPG için item yönetim paneli. Panelden şunları yapabili
 - **Oyun içi önizleme:** Itemin oyunda nasıl görüneceğini gösteren tooltip. Seçilen yükseltme seviyesine göre değerler güncellenir.
 - **Bonus tanımları:** 35 klasik Metin2 bonusu hazır gelir. Bunlar düzenlenebilir, yenileri eklenebilir.
 - **İçe / dışa aktarma:** JSON yedek ve geri yükleme ile `item_proto` benzeri, sekmeyle ayrılmış dışa aktarma.
+- **Linkten içe aktarma:** metin2alerts.com'daki bir item linkini yapıştırarak isim, seviye, sınıf, güç değerleri, bonuslar, +0…+N yükseltme tablosu, ikon ve 3D model okunabilir. Veriler düzenleyicide taslak olarak açılır; ayrıntılar aşağıda.
 - **Item Wiki (`/wiki`):** Oyuncuların giriş yapmadan gezebileceği item veritabanı. Ayrıntıları aşağıda.
 - Genel bakış ekranı, değişiklik geçmişi, item kopyalama, arama, filtreleme ve sayfalama.
+
+## Linkten içe aktarma
+
+**Itemler → Linkten içe aktar** menüsüne `https://metin2alerts.com/en/wiki/item/180-poison-sword` gibi bir item linki yapıştırın. Akış şöyle işler:
+
+1. Sunucu sayfayı indirir ve okur. Okunan alanlar ve uyarılar bir önizleme penceresinde gösterilir. Tip ve alt tip burada düzeltilebilir.
+2. Panelde tanımlı olmayan yükseltme malzemeleri tek tıkla **Malzeme** olarak içe aktarılabilir.
+3. **Düzenleyicide aç** dendiğinde item, formu doldurulmuş ama **kaydedilmemiş** bir taslak olarak açılır. Her alan düzenlenebilir.
+4. Kaydedince, seçildiyse kaynaktaki ikon ve 3D model sunucuya indirilir.
+5. Aynı vnum zaten varsa, mevcut item güncellenebilir ya da yeni bir vnum ile ayrı item oluşturulabilir.
+6. Kaynak link item'da saklanır. Düzenleyicideki **Kaynaktan güncelle** butonu verileri yeniden okuyup forma uygular; kaydetmezseniz hiçbir şey değişmez.
+
+**Güvenlik:** Sunucu yalnızca `https://` ile başlayan ve izin verilen alan adlarından (varsayılan olarak `metin2alerts.com` ve alt alan adları) veri indirir. Yönlendirmeler tek tek kontrol edilir. Sayfa için 3 MB, ikon için 2 MB, model için 50 MB boyut sınırı vardır. Ek alan adları `IMPORT_ALLOWED_HOSTS` ile tanımlanır.
+
+> **Not:** metin2alerts okuyucusu (`server/importers/metin2alerts.ts`), site geliştirme ortamından erişilemediği için gerçek sayfa görülmeden yazıldı. Bilinen adres yapısına ve sayfalarda geçen metinlere dayanıyor. Gerçek sayfalarla doğrulanması ve gerektiğinde düzeltilmesi gerekiyor. Okunamayan alanlar taslakta boş kalır ve önizlemede işaretlenir. Testlerde kullanılan `tests/fixtures/metin2alerts-approx.html` elle yazılmış yaklaşık bir örnektir.
+
+Başka bir site eklemek için `server/importers/` altına `SiteImporter` arayüzünü uygulayan bir modül yazıp `IMPORTERS` listesine eklemeniz yeterli.
 
 ## Item Wiki
 
@@ -101,4 +119,6 @@ Tüm uç noktalar `/api` altındadır. `/api/auth/*` ve `/api/public/*` dışın
 | GET / POST / PUT / DELETE | `/api/bonus-types` | Bonus tanımları |
 | GET | `/api/export/json`, `/api/export/item_proto.txt` | Dışa aktarma |
 | POST | `/api/import/json` | JSON içe aktarma (vnum'a göre ekler veya günceller) |
+| POST | `/api/import/url` | Linkten okuyup taslak döndürür (kaydetmez) |
+| POST | `/api/items/:id/remote-media` | Kaynaktaki ikon veya 3D modeli indirip iteme bağlar |
 | GET | `/api/public/catalog`, `/api/public/items`, `/api/public/items/:vnum` | Wiki için salt okunur uç noktalar (giriş gerektirmez) |

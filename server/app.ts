@@ -27,6 +27,8 @@ import {
   updateItem,
   vnumTaken,
 } from './items.ts';
+import { allowedHosts, FetchError, safeFetch } from './importers/fetch.ts';
+import { IMPORTERS, importFromUrl } from './importers/index.ts';
 import { wikiRouter } from './wiki.ts';
 import { bonusTypeInputSchema, formatZodError, itemInputSchema, type ItemInput } from './validation.ts';
 
@@ -292,6 +294,23 @@ export function createApp({ db, uploadDir, auth, clientDir, publicWiki = true }:
   });
 
   // ---- Medya (ikon / 3D model) ----
+  /** Yüklenen dosyayı iteme bağlar ve eski dosyayı siler. */
+  const attachMedia = (id: number, kind: 'icon' | 'model', rel: string, originalName: string) => {
+    const row = getItemRow(db, id)!;
+    if (kind === 'icon') {
+      db.prepare("UPDATE items SET icon_path = ?, updated_at = datetime('now') WHERE id = ?").run(rel, id);
+      removeUpload(row.icon_path);
+    } else {
+      db.prepare("UPDATE items SET model_path = ?, model_file_name = ?, updated_at = datetime('now') WHERE id = ?").run(
+        rel,
+        originalName.slice(0, 200),
+        id,
+      );
+      removeUpload(row.model_path);
+    }
+    logActivity(db, 'upload', 'item', id, `${kind === 'icon' ? 'İkon' : '3D model'} yüklendi: ${row.name} (#${row.vnum})`);
+  };
+
   const mediaRoutes = (kind: 'icon' | 'model') => {
     const sub = kind === 'icon' ? 'icons' : 'models';
     const run = kind === 'icon' ? uploadIcon : uploadModel;
@@ -305,20 +324,7 @@ export function createApp({ db, uploadDir, auth, clientDir, publicWiki = true }:
       if (!row) throw new HttpError(404, 'Item bulunamadı.');
       await run(req, res);
       if (!req.file) throw new HttpError(400, 'Dosya gönderilmedi.');
-      const rel = `${sub}/${req.file.filename}`;
-      if (kind === 'icon') {
-        db.prepare("UPDATE items SET icon_path = ?, updated_at = datetime('now') WHERE id = ?").run(rel, id);
-        removeUpload(row.icon_path);
-      } else {
-        const original = path.basename(req.file.originalname).slice(0, 200);
-        db.prepare("UPDATE items SET model_path = ?, model_file_name = ?, updated_at = datetime('now') WHERE id = ?").run(
-          rel,
-          original,
-          id,
-        );
-        removeUpload(row.model_path);
-      }
-      logActivity(db, 'upload', 'item', id, `${label} yüklendi: ${row.name} (#${row.vnum})`);
+      attachMedia(id, kind, `${sub}/${req.file.filename}`, path.basename(req.file.originalname));
       res.json(getItem(db, id));
     };
 
@@ -341,6 +347,53 @@ export function createApp({ db, uploadDir, auth, clientDir, publicWiki = true }:
   };
   mediaRoutes('icon');
   mediaRoutes('model');
+
+  // ---- Harici siteden içe aktarma ----
+  api.get('/import/sources', (_req, res) => {
+    res.json({ sources: IMPORTERS.map((i) => ({ id: i.id, name: i.name, example: i.example })), allowedHosts: allowedHosts() });
+  });
+
+  const importUrlSchema = z.object({
+    url: z.string().min(1).max(500),
+    type: z.string().max(32).optional(),
+    subtype: z.string().max(32).optional(),
+  });
+
+  api.post('/import/url', (req, res, next) => {
+    const body = importUrlSchema.parse(req.body);
+    const override = body.type && body.subtype ? { type: body.type, subtype: body.subtype } : undefined;
+    importFromUrl(db, body.url, override)
+      .then((draft) => res.json(draft))
+      .catch(next);
+  });
+
+  const MEDIA_TYPES: Record<string, string> = {
+    'image/png': '.png',
+    'image/jpeg': '.jpg',
+    'image/webp': '.webp',
+    'image/gif': '.gif',
+    'model/gltf-binary': '.glb',
+    'model/gltf+json': '.gltf',
+  };
+
+  /** Kaynak sitedeki ikon veya 3D modeli indirip iteme bağlar. */
+  api.post('/items/:id/remote-media', (req, res, next) => {
+    const id = idParam(req);
+    const row = getItemRow(db, id);
+    if (!row) throw new HttpError(404, 'Item bulunamadı.');
+    const { kind, url } = z.object({ kind: z.enum(['icon', 'model']), url: z.string().url().max(1000) }).parse(req.body);
+    const exts: readonly string[] = kind === 'icon' ? ICON_EXTENSIONS : MODEL_EXTENSIONS;
+    (async () => {
+      const file = await safeFetch(url, { maxBytes: kind === 'icon' ? MAX_ICON_BYTES : MAX_MODEL_BYTES });
+      const urlExt = path.extname(new URL(file.url).pathname).toLowerCase();
+      const ext = exts.includes(urlExt) ? urlExt : MEDIA_TYPES[file.contentType.split(';')[0].trim().toLowerCase()];
+      if (!ext || !exts.includes(ext)) throw new HttpError(400, `Kaynaktaki dosya türü desteklenmiyor (${urlExt || file.contentType || 'bilinmiyor'}).`);
+      const rel = `${kind === 'icon' ? 'icons' : 'models'}/${crypto.randomUUID()}${ext}`;
+      await fs.promises.writeFile(path.join(uploadDir, rel), file.body);
+      attachMedia(id, kind, rel, path.basename(new URL(file.url).pathname) || `model${ext}`);
+      res.json(getItem(db, id));
+    })().catch(next);
+  });
 
   // ---- Dışa / içe aktarma ----
   const allItems = () =>
@@ -484,6 +537,7 @@ export function createApp({ db, uploadDir, auth, clientDir, publicWiki = true }:
   }
 
   app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
+    if (err instanceof FetchError) return res.status(err.status).json({ error: err.message });
     if (err instanceof HttpError) return res.status(err.status).json({ error: err.message, ...err.extra });
     if (err instanceof z.ZodError) return res.status(400).json(formatZodError(err));
     if ((err as { type?: string }).type === 'entity.parse.failed') return res.status(400).json({ error: 'Geçersiz JSON.' });

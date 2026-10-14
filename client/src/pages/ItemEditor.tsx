@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import {
   CLASSES,
   GENDERS,
@@ -13,8 +13,9 @@ import {
   RARITIES,
   type ItemType,
 } from '@shared/constants';
-import type { BonusType, Item, ItemBonus, ItemStats, ItemUpgrade } from '@shared/types';
+import type { BonusType, ImportDraft, Item, ItemBonus, ItemStats, ItemUpgrade } from '@shared/types';
 import { api, ApiError, uploadFile } from '../api';
+import { ImportDialog, type ImportAssets, type ImportResult } from '../components/ImportDialog';
 import { ItemTooltip } from '../components/ItemTooltip';
 import { ModelViewer } from '../components/LazyModelViewer';
 import { EmptyState, Field, NumberInput, PageHeader, Spinner, useConfirm, useToast } from '../components/ui';
@@ -40,6 +41,7 @@ const emptyForm = (vnum: number): Form => ({
   stats: { ...EMPTY_STATS },
   bonuses: [],
   upgrades: [],
+  sourceUrl: null,
 });
 
 const toForm = (item: Item): Form => {
@@ -68,6 +70,14 @@ const TABS = [
 ] as const;
 type TabKey = (typeof TABS)[number]['key'];
 
+/** Linkten içe aktarmadan sonra düzenleyiciye router state ile gelen veri */
+export interface ImportState {
+  importDraft: ImportDraft;
+  importAssets: ImportAssets;
+}
+
+const draftToForm = (d: ImportDraft): Form => ({ ...(d.item as unknown as Form), sourceUrl: d.source.url });
+
 export function ItemEditorPage() {
   const { id } = useParams();
   const isNew = !id;
@@ -84,8 +94,23 @@ export function ItemEditorPage() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [previewLevel, setPreviewLevel] = useState(0);
   const [loadError, setLoadError] = useState('');
+  const location = useLocation();
+  // İçe aktarma taslağı yalnızca ilk açılışta uygulanır
+  const incoming = useRef<ImportState | null>((location.state as ImportState | null)?.importDraft ? (location.state as ImportState) : null);
+  const [importInfo, setImportInfo] = useState<{ draft: ImportDraft; assets: ImportAssets; useIcon: boolean; useModel: boolean } | null>(null);
+  const [refreshOpen, setRefreshOpen] = useState(false);
+
+  const takeIncoming = () => {
+    const state = incoming.current;
+    if (!state) return null;
+    incoming.current = null;
+    navigate(location.pathname, { replace: true, state: null });
+    setImportInfo({ draft: state.importDraft, assets: state.importAssets, useIcon: !!state.importAssets.iconUrl, useModel: !!state.importAssets.modelUrl });
+    return draftToForm(state.importDraft);
+  };
 
   useEffect(() => {
+    let cancelled = false;
     setLoadError('');
     setForm(null);
     api.get<BonusType[]>('/api/bonus-types').then(setBonusTypes).catch(() => {});
@@ -94,8 +119,9 @@ export function ItemEditorPage() {
       api
         .get<{ vnum: number }>('/api/items/next-vnum')
         .then(({ vnum }) => {
+          if (cancelled) return;
           const f = emptyForm(vnum);
-          setForm(f);
+          setForm(takeIncoming() ?? f);
           setSaved(JSON.stringify(f));
         })
         .catch((e) => setLoadError(e.message));
@@ -103,14 +129,46 @@ export function ItemEditorPage() {
       api
         .get<Item>(`/api/items/${id}`)
         .then((it) => {
+          if (cancelled) return;
           setItem(it);
           const f = toForm(it);
-          setForm(f);
+          setForm(takeIncoming() ?? f);
           setSaved(JSON.stringify(f));
         })
         .catch((e) => setLoadError(e.message));
     }
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, isNew]);
+
+  /** Kaynaktaki ikon/3D modeli, kaydedilen iteme indirir. */
+  const downloadAssets = async (target: Item): Promise<Item> => {
+    if (!importInfo) return target;
+    let current = target;
+    const jobs: Array<['icon' | 'model', string | null, boolean]> = [
+      ['icon', importInfo.assets.iconUrl, importInfo.useIcon],
+      ['model', importInfo.assets.modelUrl, importInfo.useModel],
+    ];
+    for (const [kind, url, enabled] of jobs) {
+      if (!url || !enabled) continue;
+      try {
+        current = await api.post<Item>(`/api/items/${target.id}/remote-media`, { kind, url });
+        toast('success', kind === 'icon' ? 'İkon kaynaktan indirildi.' : '3D model kaynaktan indirildi.');
+      } catch (e) {
+        toast('error', `${kind === 'icon' ? 'İkon' : '3D model'} indirilemedi: ${(e as Error).message}`);
+      }
+    }
+    return current;
+  };
+
+  const applyRefresh = (r: ImportResult) => {
+    setRefreshOpen(false);
+    setForm((f) => (f ? { ...draftToForm(r.draft), vnum: f.vnum } : f));
+    setImportInfo({ draft: r.draft, assets: r.assets, useIcon: !!r.assets.iconUrl, useModel: !!r.assets.modelUrl });
+    toast('success', 'Kaynaktaki veriler forma uygulandı. Kontrol edip kaydedin.');
+  };
 
   const dirty = form !== null && JSON.stringify(form) !== saved;
 
@@ -136,7 +194,11 @@ export function ItemEditorPage() {
     setErrors({});
     try {
       const body = normalizeForSave(form);
-      const result = isNew ? await api.post<Item>('/api/items', body) : await api.put<Item>(`/api/items/${id}`, body);
+      let result = isNew ? await api.post<Item>('/api/items', body) : await api.put<Item>(`/api/items/${id}`, body);
+      if (importInfo) {
+        result = await downloadAssets(result);
+        setImportInfo(null);
+      }
       const f = toForm(result);
       setItem(result);
       setForm(f);
@@ -160,7 +222,8 @@ export function ItemEditorPage() {
     } finally {
       setSaving(false);
     }
-  }, [form, saving, isNew, id, navigate, toast]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form, saving, isNew, id, navigate, toast, importInfo]);
 
   // Ctrl/Cmd + S ile kaydet
   useEffect(() => {
@@ -225,18 +288,68 @@ export function ItemEditorPage() {
                 Wiki'de gör ↗
               </a>
             )}
+            {!isNew && item?.sourceUrl && (
+              <button className="btn-ghost" onClick={() => setRefreshOpen(true)} title={item.sourceUrl}>
+                Kaynaktan güncelle
+              </button>
+            )}
             {!isNew && (
               <button className="btn-danger" onClick={remove}>
                 Sil
               </button>
             )}
-            <button className="btn-primary" onClick={save} disabled={saving || (!dirty && !isNew)} title="Ctrl + S">
+            <button className="btn-primary" onClick={save} disabled={saving || (!dirty && !isNew && !importInfo)} title="Ctrl + S">
               {saving && <Spinner />}
               {isNew ? 'Oluştur' : dirty ? 'Kaydet' : 'Kaydedildi'}
             </button>
           </>
         }
       />
+
+      {importInfo && (
+        <div className="mb-5 rounded-xl border border-gold-500/30 bg-gold-500/5 p-4 text-sm">
+          <div className="flex flex-wrap items-start justify-between gap-2">
+            <div>
+              <div className="font-medium text-gold-300">
+                {importInfo.draft.source.importerName} kaynağından içe aktarıldı — henüz kaydedilmedi
+              </div>
+              <a href={importInfo.draft.source.url} target="_blank" rel="noreferrer" className="break-all text-xs text-slate-400 hover:text-gold-300">
+                {importInfo.draft.source.url}
+              </a>
+            </div>
+            <button className="text-xs text-slate-500 hover:text-slate-300" onClick={() => setImportInfo(null)}>
+              Bildirimi kapat
+            </button>
+          </div>
+          <p className="mt-2 text-slate-300">Tüm sekmeleri kontrol edin, istediğiniz değişiklikleri yapın ve kaydedin.</p>
+          {importInfo.draft.warnings.length > 0 && (
+            <ul className="mt-2 space-y-0.5 text-amber-200">
+              {importInfo.draft.warnings.map((w) => (
+                <li key={w}>• {w}</li>
+              ))}
+            </ul>
+          )}
+          {(importInfo.assets.iconUrl || importInfo.assets.modelUrl) && (
+            <div className="mt-3 flex flex-wrap gap-4 text-slate-300">
+              <span className="text-slate-400">Kaydedince indir:</span>
+              {importInfo.assets.iconUrl && (
+                <label className="flex items-center gap-2">
+                  <input type="checkbox" className="h-4 w-4 accent-gold-500" checked={importInfo.useIcon} onChange={(e) => setImportInfo({ ...importInfo, useIcon: e.target.checked })} />
+                  İkon
+                </label>
+              )}
+              {importInfo.assets.modelUrl && (
+                <label className="flex items-center gap-2">
+                  <input type="checkbox" className="h-4 w-4 accent-gold-500" checked={importInfo.useModel} onChange={(e) => setImportInfo({ ...importInfo, useModel: e.target.checked })} />
+                  3D model
+                </label>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {item && <ImportDialog open={refreshOpen} onClose={() => setRefreshOpen(false)} onConfirm={applyRefresh} initialUrl={item.sourceUrl ?? ''} refreshOf={item} />}
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
         <div className="min-w-0">

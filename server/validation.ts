@@ -43,6 +43,7 @@ export const itemInputSchema = z
       .array(z.object({ bonusTypeId: int(1), value: z.coerce.number().min(-100_000).max(100_000) }))
       .max(10, 'Bir iteme en fazla 10 bonus eklenebilir.')
       .default([]),
+    sourceUrl: z.string().url().max(500).nullable().optional(),
     upgrades: z
       .array(
         z.object({

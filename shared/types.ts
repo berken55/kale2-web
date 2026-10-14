@@ -59,6 +59,8 @@ export interface Item {
   iconUrl: string | null;
   modelUrl: string | null;
   modelFileName: string | null;
+  /** İçe aktarıldıysa kaynak sayfa adresi */
+  sourceUrl: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -121,4 +123,39 @@ export interface WikiItemDetail {
   bonusTypes: BonusType[];
   /** Yükseltme malzemelerinin vnum'a göre item bilgileri (panelde tanımlıysa) */
   materials: Record<number, WikiMaterialRef>;
+}
+
+/** Harici bir sayfadan okunan, henüz kaydedilmemiş item taslağı. */
+export interface ImportDraft {
+  source: { url: string; importer: string; importerName: string };
+  item: {
+    vnum: number;
+    name: string;
+    type: string;
+    subtype: string;
+    rarity: string;
+    levelRequired: number;
+    classes: string[];
+    gender: string;
+    buyPrice: number;
+    sellPrice: number;
+    stackSize: number;
+    tradable: boolean;
+    description: string;
+    stats: ItemStats;
+    bonuses: ItemBonus[];
+    upgrades: ItemUpgrade[];
+    sourceUrl: string;
+  };
+  /** Kaynakta bulunan ikon ve 3D model adresleri (kayıttan sonra indirilir) */
+  assets: { iconUrl: string | null; modelUrl: string | null };
+  /** Aynı vnum'a sahip mevcut item */
+  existingItemId: number | null;
+  /** Panelde karşılığı bulunamayan bonuslar */
+  unresolvedBonuses: Array<{ label: string; value: number; unit: string }>;
+  /** Panelde tanımlı olmayan yükseltme malzemeleri */
+  missingMaterials: Array<{ vnum: number; name: string; url: string | null }>;
+  /** Hangi alanların sayfadan okunabildiği */
+  found: string[];
+  warnings: string[];
 }

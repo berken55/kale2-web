@@ -26,6 +26,7 @@ interface ItemRow {
   icon_path: string | null;
   model_path: string | null;
   model_file_name: string | null;
+  source_url: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -96,6 +97,7 @@ export function getItem(db: DB, id: number): Item | null {
       materials: JSON.parse(u.materials),
     })),
     modelFileName: row.model_file_name,
+    sourceUrl: row.source_url,
     createdAt: row.created_at,
   };
 }
@@ -224,6 +226,7 @@ function scalarParams(input: ItemInput) {
     max_magic_attack: input.stats.maxMagicAttack,
     defense: input.stats.defense,
     attack_speed: input.stats.attackSpeed,
+    source_url: input.sourceUrl ?? null,
   };
 }
 
@@ -278,5 +281,6 @@ export function itemToInput(item: Item): ItemInput {
     stats: item.stats,
     bonuses: item.bonuses,
     upgrades: item.upgrades,
+    sourceUrl: item.sourceUrl,
   };
 }

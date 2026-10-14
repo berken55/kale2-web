@@ -82,8 +82,15 @@ export function openDatabase(file: string): DB {
   db.pragma('journal_mode = WAL');
   db.pragma('foreign_keys = ON');
   db.exec(SCHEMA);
+  migrate(db);
   seedBonusTypes(db);
   return db;
+}
+
+/** Eski veritabanlarına sonradan eklenen sütunları ekler. */
+function migrate(db: DB) {
+  const columns = new Set((db.prepare('PRAGMA table_info(items)').all() as Array<{ name: string }>).map((c) => c.name));
+  if (!columns.has('source_url')) db.exec('ALTER TABLE items ADD COLUMN source_url TEXT');
 }
 
 function seedBonusTypes(db: DB) {
