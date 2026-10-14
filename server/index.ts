@@ -32,6 +32,7 @@ const app = createApp({
   db,
   uploadDir,
   auth: { username, password, secret, secureCookie: process.env.COOKIE_SECURE === 'true' },
+  publicWiki: process.env.PUBLIC_WIKI !== 'false',
   clientDir: isProd ? path.join(root, 'dist/client') : undefined,
 });
 

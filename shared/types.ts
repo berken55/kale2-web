@@ -93,3 +93,32 @@ export interface DashboardStats {
   byRarity: Array<{ rarity: string; count: number }>;
   recentActivity: ActivityEntry[];
 }
+
+export interface WikiCatalog {
+  total: number;
+  groups: Array<{ type: string; subtype: string; count: number }>;
+}
+
+export interface WikiItemListResponse {
+  items: Item[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+export interface WikiMaterialRef {
+  id: number;
+  vnum: number;
+  name: string;
+  rarity: string;
+  iconUrl: string | null;
+}
+
+export interface WikiItemDetail {
+  item: Item;
+  /** İstenen vnum bir yükseltme seviyesine (taban vnum + seviye) karşılık geliyorsa o seviye */
+  level: number;
+  bonusTypes: BonusType[];
+  /** Yükseltme malzemelerinin vnum'a göre item bilgileri (panelde tanımlıysa) */
+  materials: Record<number, WikiMaterialRef>;
+}

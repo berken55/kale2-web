@@ -15,6 +15,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Herkese açık wiki sayfalarında oturum kontrolüne gerek yok
+    if (window.location.pathname.startsWith('/wiki')) {
+      setLoading(false);
+      return;
+    }
     api
       .get<{ username: string }>('/api/auth/me')
       .then((r) => setUsername(r.username))

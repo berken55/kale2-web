@@ -59,6 +59,10 @@ export function Layout() {
       <aside className="hidden w-60 shrink-0 flex-col gap-8 border-r border-white/5 bg-ink-900/60 p-4 lg:flex lg:sticky lg:top-0 lg:h-screen">
         {brand}
         {nav}
+        <a href="/wiki" target="_blank" rel="noreferrer" className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-slate-400 hover:bg-white/5 hover:text-slate-200">
+          <Icon d="M4 5a2 2 0 012-2h13v16H6a2 2 0 00-2 2zM4 5v16M8 7h7" />
+          Item Wiki ↗
+        </a>
         <div className="mt-auto rounded-lg border border-white/5 p-3 text-xs text-slate-400">
           <div className="truncate">
             Giriş: <span className="text-slate-200">{username}</span>

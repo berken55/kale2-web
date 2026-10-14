@@ -10,7 +10,18 @@ Metin2 tarzı bir MMORPG için item yönetim paneli. Panelden şunları yapabili
 - **Oyun içi önizleme:** Itemin oyunda nasıl görüneceğini gösteren tooltip. Seçilen yükseltme seviyesine göre değerler güncellenir.
 - **Bonus tanımları:** 35 klasik Metin2 bonusu hazır gelir. Bunlar düzenlenebilir, yenileri eklenebilir.
 - **İçe / dışa aktarma:** JSON yedek ve geri yükleme ile `item_proto` benzeri, sekmeyle ayrılmış dışa aktarma.
+- **Item Wiki (`/wiki`):** Oyuncuların giriş yapmadan gezebileceği item veritabanı. Ayrıntıları aşağıda.
 - Genel bakış ekranı, değişiklik geçmişi, item kopyalama, arama, filtreleme ve sayfalama.
+
+## Item Wiki
+
+`/wiki` adresi, panelde tanımlanan itemleri oyunculara gösteren salt okunur bir veritabanıdır ve giriş gerektirmez.
+
+- **Kategoriler:** Kılıç, çift el, hançer, yay, çan, yelpaze, pençe, zırh, kask, kalkan, bilezik, ayakkabı, kolye, küpe, kemer ve diğerleri.
+- **Kategori listesi:** Üstteki +0 … +9 seçiciyle tüm itemlerin o seviyedeki saldırı, büyülü saldırı ve savunma değerleri gösterilir. O seviyeye yükseltilemeyen itemler kendi en yüksek seviyesiyle ve soluk renkle görünür.
+- **Item sayfası:** Seviye seçici, oyun içi tooltip, 3D model, bonuslar ve yükseltme tablosu. Tabloda her seviye için toplam değerler, başarı şansı, Yang maliyeti, toplam Yang ve gerekli malzemeler yer alır. Malzeme panelde tanımlıysa ikonu ve sayfa bağlantısıyla gösterilir.
+- **Seviye vnum'ları:** Metin2 geleneğine göre +N seviyesi `taban vnum + N` ile anılır. Örneğin `/wiki/item/19`, 10 numaralı itemin +9 sayfasını açar.
+- **Kapatma:** Wiki'yi yalnızca yöneticilere açmak için `PUBLIC_WIKI=false` ayarlayın.
 
 ## Teknoloji
 
@@ -77,7 +88,7 @@ Item tipleri, alt tipler, sınıflar ve nadirlik seviyeleri `shared/constants.ts
 
 ## API
 
-Tüm uç noktalar `/api` altındadır ve `/api/auth/*` dışında oturum gerektirir.
+Tüm uç noktalar `/api` altındadır. `/api/auth/*` ve `/api/public/*` dışındakiler oturum gerektirir.
 
 | Yöntem | Yol | Açıklama |
 | --- | --- | --- |
@@ -90,3 +101,4 @@ Tüm uç noktalar `/api` altındadır ve `/api/auth/*` dışında oturum gerekti
 | GET / POST / PUT / DELETE | `/api/bonus-types` | Bonus tanımları |
 | GET | `/api/export/json`, `/api/export/item_proto.txt` | Dışa aktarma |
 | POST | `/api/import/json` | JSON içe aktarma (vnum'a göre ekler veya günceller) |
+| GET | `/api/public/catalog`, `/api/public/items`, `/api/public/items/:vnum` | Wiki için salt okunur uç noktalar (giriş gerektirmez) |

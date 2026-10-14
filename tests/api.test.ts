@@ -188,3 +188,37 @@ describe('dışa / içe aktarma', () => {
     expect(list.total).toBe(1);
   });
 });
+
+describe('item wiki (herkese açık)', () => {
+  it('giriş yapmadan katalog, liste ve +N vnum çözümlemesi sunar', async () => {
+    const { app, agent } = await setup();
+    await agent.post('/api/items').send({ ...sword, vnum: 27001, name: 'Kutsama Kağıdı', type: 'MATERIAL', subtype: 'REFINE', classes: [], stats: {}, upgrades: [] }).expect(201);
+    await agent.post('/api/items').send(sword).expect(201);
+
+    const anon = request(app);
+    const catalog = (await anon.get('/api/public/catalog').expect(200)).body;
+    expect(catalog.total).toBe(2);
+    expect(catalog.groups).toContainEqual({ type: 'WEAPON', subtype: 'SWORD', count: 1 });
+
+    const list = (await anon.get('/api/public/items?type=WEAPON&subtype=SWORD').expect(200)).body;
+    expect(list.items[0].upgrades).toHaveLength(2);
+
+    const base = (await anon.get('/api/public/items/10').expect(200)).body;
+    expect(base.level).toBe(0);
+    expect(base.materials[27001].name).toBe('Kutsama Kağıdı');
+
+    const plusOne = (await anon.get('/api/public/items/11').expect(200)).body;
+    expect(plusOne.item.vnum).toBe(10);
+    expect(plusOne.level).toBe(1);
+
+    await anon.get('/api/public/items/15').expect(404);
+    // Yönetim uç noktaları hâlâ korumalı
+    await anon.get('/api/items').expect(401);
+  });
+
+  it('kapatıldığında giriş ister', async () => {
+    const app = createApp({ db: openDatabase(':memory:'), uploadDir: fs.mkdtempSync(path.join(os.tmpdir(), 'k2-')), auth, publicWiki: false });
+    await request(app).get('/api/public/catalog').expect(401);
+    expect((await request(app).get('/api/public/status').expect(200)).body).toEqual({ enabled: false });
+  });
+});

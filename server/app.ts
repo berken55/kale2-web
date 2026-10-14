@@ -27,6 +27,7 @@ import {
   updateItem,
   vnumTaken,
 } from './items.ts';
+import { wikiRouter } from './wiki.ts';
 import { bonusTypeInputSchema, formatZodError, itemInputSchema, type ItemInput } from './validation.ts';
 
 export interface AppOptions {
@@ -34,6 +35,8 @@ export interface AppOptions {
   uploadDir: string;
   auth: AuthConfig;
   clientDir?: string;
+  /** Giriş gerektirmeyen item wiki'si (varsayılan: açık) */
+  publicWiki?: boolean;
 }
 
 class HttpError extends Error {
@@ -78,7 +81,7 @@ function mapBonusType(row: Record<string, unknown>): BonusType {
   };
 }
 
-export function createApp({ db, uploadDir, auth, clientDir }: AppOptions) {
+export function createApp({ db, uploadDir, auth, clientDir, publicWiki = true }: AppOptions) {
   const app = express();
   app.disable('x-powered-by');
   app.set('trust proxy', 'loopback');
@@ -129,6 +132,8 @@ export function createApp({ db, uploadDir, auth, clientDir }: AppOptions) {
 
   const api = express.Router();
   api.use('/auth', authRouter(auth));
+  api.get('/public/status', (_req, res) => res.json({ enabled: publicWiki }));
+  api.use('/public', ...(publicWiki ? [] : [requireAuth(auth)]), wikiRouter(db));
   api.use(requireAuth(auth));
 
   // ---- Dashboard ----

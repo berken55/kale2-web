@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, type DragEvent } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import {
   CLASSES,
@@ -16,18 +16,8 @@ import {
 import type { BonusType, Item, ItemBonus, ItemStats, ItemUpgrade } from '@shared/types';
 import { api, ApiError, uploadFile } from '../api';
 import { ItemTooltip } from '../components/ItemTooltip';
+import { ModelViewer } from '../components/LazyModelViewer';
 import { EmptyState, Field, NumberInput, PageHeader, Spinner, useConfirm, useToast } from '../components/ui';
-
-// three.js büyük bir paket; yalnızca 3D model gösterilirken yüklenir
-const LazyModelViewer = lazy(() => import('../components/ModelViewer').then((m) => ({ default: m.ModelViewer })));
-
-function ModelViewer(props: { url: string; className?: string }) {
-  return (
-    <Suspense fallback={<div className={`flex items-center justify-center rounded-xl border border-white/10 bg-ink-850 ${props.className ?? ''}`}><Spinner className="text-gold-400" /></div>}>
-      <LazyModelViewer {...props} />
-    </Suspense>
-  );
-}
 
 type Form = Omit<Item, 'id' | 'iconUrl' | 'modelUrl' | 'modelFileName' | 'createdAt' | 'updatedAt'>;
 
@@ -230,6 +220,11 @@ export function ItemEditorPage() {
             <Link to="/items" className="btn-ghost">
               ← Liste
             </Link>
+            {!isNew && item && (
+              <a href={`/wiki/item/${item.vnum}`} target="_blank" rel="noreferrer" className="btn-ghost">
+                Wiki'de gör ↗
+              </a>
+            )}
             {!isNew && (
               <button className="btn-danger" onClick={remove}>
                 Sil
