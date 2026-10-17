@@ -25,6 +25,7 @@ export class ModelAnimation {
 
   setSpeed(speed: number) { this.mixer.timeScale = speed; }
   get time() { return this.action?.time ?? 0; }
+  get current() { return this.action?.getClip(); }
 
   seek(time: number) {
     if (!this.action) return;

@@ -417,7 +417,7 @@ export function ItemEditorPage() {
             iconUrl={item?.iconUrl ?? null}
             upgradeLevel={form.upgrades.some((u) => u.level === previewLevel) ? previewLevel : 0}
           />
-          {item?.modelUrl && <ModelViewer url={item.modelUrl} className="aspect-square" />}
+          {item?.modelUrl && <ModelViewer url={item.modelUrl} className="aspect-[4/5]" />}
         </aside>
       </div>
     </>
@@ -1052,7 +1052,7 @@ export function MediaTab<T extends MediaOwner>({ item, onChange, base = '/api/it
         </p>
         {item.modelUrl && (
           <div className="mb-4">
-            <ModelViewer url={item.modelUrl} className="h-[380px]" />
+            <ModelViewer url={item.modelUrl} className="h-[520px]" />
             <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-sm">
               <span className="text-slate-400">
                 Dosya: <span className="text-slate-200">{item.modelFileName}</span>

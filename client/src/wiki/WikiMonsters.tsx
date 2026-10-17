@@ -140,8 +140,8 @@ export function WikiMonster() {
         </div>
       </div>
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-[340px_minmax(0,1fr)]">
-        <div>{m.modelUrl ? <ModelViewer url={m.modelUrl} className="aspect-square" /> : <div className="card p-6 text-center text-sm text-slate-500">3D model yok</div>}</div>
+      <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,440px)_minmax(0,1fr)]">
+        <div>{m.modelUrl ? <ModelViewer url={m.modelUrl} className="aspect-[4/5]" /> : <div className="card p-6 text-center text-sm text-slate-500">3D model yok</div>}</div>
         <div className="space-y-6">
           <section className="card p-5">
             <h2 className="mb-4 text-sm font-semibold uppercase tracking-wider text-slate-400">İstatistikler</h2>

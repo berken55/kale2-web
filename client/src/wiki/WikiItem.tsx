@@ -120,10 +120,10 @@ export function WikiItem() {
         </div>
       )}
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-[340px_minmax(0,1fr)]">
+      <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,440px)_minmax(0,1fr)]">
         <div className="space-y-4">
           <ItemTooltip {...item} bonusTypes={bonusTypes} upgradeLevel={level} />
-          {item.modelUrl && <ModelViewer url={item.modelUrl} className="aspect-square" />}
+          {item.modelUrl && <ModelViewer url={item.modelUrl} className="aspect-[4/5]" />}
         </div>
 
         <div className="space-y-6">

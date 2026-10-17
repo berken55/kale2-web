@@ -555,7 +555,7 @@ export function MonsterEditorPage() {
         <aside className="space-y-4 xl:sticky xl:top-8 xl:self-start">
           <h2 className="text-xs font-medium uppercase tracking-wide text-slate-500">Özet</h2>
           <MonsterCard form={form} iconUrl={monster?.iconUrl ?? importInfo?.draft.assets.iconUrl ?? null} />
-          {monster?.modelUrl && <ModelViewer url={monster.modelUrl} className="aspect-square" />}
+          {monster?.modelUrl && <ModelViewer url={monster.modelUrl} className="aspect-[4/5]" />}
         </aside>
       </div>
     </>
