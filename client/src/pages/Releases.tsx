@@ -33,6 +33,23 @@ export function ReleasesPage() {
     api.get<GameConfig>('/api/game-config').then(setConfig).catch(() => {});
   }, [toast]);
 
+  const [expText, setExpText] = useState('');
+  useEffect(() => {
+    if (config) setExpText(String(config.exp_rate));
+  }, [config]);
+
+  const saveExpRate = async () => {
+    const n = Number(expText.replace(',', '.'));
+    if (!config || !Number.isFinite(n) || n === config.exp_rate) return;
+    try {
+      setConfig(await api.put<GameConfig>('/api/game-config', { exp_rate: n }));
+      load();
+    } catch (e) {
+      toast('error', (e as Error).message);
+      setExpText(String(config.exp_rate));
+    }
+  };
+
   const setStatsMode = async (mode: GameConfig['monster_stats']) => {
     try {
       setConfig(await api.put<GameConfig>('/api/game-config', { monster_stats: mode }));
@@ -122,6 +139,22 @@ export function ReleasesPage() {
                       ))}
                     </select>
                   </label>
+                  <label className="mt-3 flex flex-wrap items-center gap-3">
+                    <span className="text-slate-300">Köy EXP oranı:</span>
+                    <input
+                      className="input w-24 py-1 tabular-nums"
+                      inputMode="decimal"
+                      value={expText}
+                      onChange={(e) => setExpText(e.target.value)}
+                      onBlur={saveExpRate}
+                      onKeyDown={(e) => e.key === 'Enter' && saveExpRate()}
+                      aria-label="Köy EXP oranı"
+                    />
+                    <span className="text-xs text-slate-500">× wiki EXP'si (1 = Metin2'deki gibi; 2 = iki kat hızlı seviye)</span>
+                  </label>
+                  <p className="mt-1 text-xs text-slate-500">
+                    Köy her zaman wiki değerlerini kullanır (can, hasar, savunma, EXP). Aşağıdaki seçim yalnızca maçtaki yaratıklar için:
+                  </p>
                   <p className="mt-1 text-xs text-slate-500">
                     {config.monster_stats === 'game'
                       ? 'Oyun kendi isim, saldırganlık ve dengesini korur; panelden yalnızca droplar gelir. Metin2 değerleri oyuna göre ayarlanınca "Paneldeki değerler"e geçin.'

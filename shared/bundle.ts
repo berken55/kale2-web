@@ -20,8 +20,10 @@ export type MonsterStatsMode = (typeof MONSTER_STATS_MODES)[number]['value'];
 /** Panelden değiştirilebilen oyun ayarları ve varsayılanları */
 export interface GameConfig {
   monster_stats: MonsterStatsMode;
+  /** Köy tecrübe çarpanı: oyuncu, yaratığın wiki EXP'si x bu oran kadar tecrübe alır (1 = wiki'deki gibi) */
+  exp_rate: number;
 }
-export const DEFAULT_GAME_CONFIG: GameConfig = { monster_stats: 'game' };
+export const DEFAULT_GAME_CONFIG: GameConfig = { monster_stats: 'game', exp_rate: 1 };
 
 /** Item ya da grup veren drop satırı. item: vnum, code: oyunun item kodu (yoksa oyunda düşmez). */
 export interface BundleDrop {
@@ -130,6 +132,7 @@ export interface BundleContent {
      * panel: isim, saldırganlık, boss, HP, hasar, menzil ve hızlar da panelden (yaratık seviyesinde birebir; diğer seviyelere ölçeklenir).
      */
     monster_stats: MonsterStatsMode;
+    exp_rate: number;
     /** diff = oyuncu seviyesi − yaratık seviyesi; en büyük eşleşen eşiğin çarpanı */
     drop_level_penalty: Array<{ diff: number; mult: number }>;
   };

@@ -32,7 +32,12 @@ export function getGameConfig(db: DB): GameConfig {
   return config;
 }
 
-const configSchema = z.object({ monster_stats: z.enum(MONSTER_STATS_MODES.map((m) => m.value) as ['game', 'panel']) }).partial();
+const configSchema = z
+  .object({
+    monster_stats: z.enum(MONSTER_STATS_MODES.map((m) => m.value) as ['game', 'panel']),
+    exp_rate: z.coerce.number().finite().min(0.1).max(100),
+  })
+  .partial();
 
 const sha = (data: string | Buffer) => crypto.createHash('sha256').update(data).digest('hex');
 
