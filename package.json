@@ -15,7 +15,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "better-sqlite3": "^12.11.1",
+    "better-sqlite3": "12.4.1",
     "cookie-parser": "^1.4.7",
     "express": "^4.21.2",
     "multer": "^1.4.5-lts.1",
