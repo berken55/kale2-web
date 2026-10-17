@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom';
-import { CATEGORY_GROUPS, CategoryIcon } from './common';
+import { CATEGORY_GROUPS, CategoryIcon, MONSTER_LINKS } from './common';
 
 export function WikiLayout() {
   const navigate = useNavigate();
@@ -41,6 +41,22 @@ export function WikiLayout() {
       <div className="mx-auto flex max-w-7xl gap-8 px-4 py-6 sm:px-6">
         <aside className={`${menu ? 'block' : 'hidden'} fixed inset-x-0 top-[57px] z-20 max-h-[calc(100vh-57px)] overflow-y-auto border-b border-white/5 bg-ink-900 p-4 lg:static lg:block lg:max-h-none lg:w-52 lg:shrink-0 lg:border-0 lg:bg-transparent lg:p-0`}>
           <nav className="space-y-5 lg:sticky lg:top-24">
+            <div>
+              <div className="mb-1.5 px-2 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Canavarlar</div>
+              <ul className="space-y-0.5">
+                {MONSTER_LINKS.map((l) => (
+                  <li key={l.path}>
+                    <Link
+                      to={l.path}
+                      onClick={() => setMenu(false)}
+                      className="flex items-center gap-2.5 rounded-md px-2 py-1.5 text-sm text-slate-400 transition hover:bg-white/5 hover:text-slate-200"
+                    >
+                      {l.label}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
             {CATEGORY_GROUPS.map((g) => (
               <div key={g.label}>
                 <div className="mb-1.5 px-2 text-[11px] font-semibold uppercase tracking-wider text-slate-500">{g.label}</div>

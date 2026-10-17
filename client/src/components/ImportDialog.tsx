@@ -1,7 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { CLASSES, ITEM_SUBTYPES, ITEM_TYPES, labelOf, type ItemType } from '@shared/constants';
 import type { ImportDraft, Item } from '@shared/types';
-import { api } from '../api';
+import { api, uploadFile } from '../api';
 import { Spinner, useToast } from './ui';
 
 export interface ImportAssets {
@@ -43,6 +43,9 @@ export function ImportDialog({
   refreshOf?: Item;
 }) {
   const toast = useToast();
+  const [vnum, setVnum] = useState('');
+  const [cookieConfigured, setCookieConfigured] = useState(false);
+  const [cookieBusy, setCookieBusy] = useState(false);
   const [url, setUrl] = useState(initialUrl);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -55,10 +58,12 @@ export function ImportDialog({
   useEffect(() => {
     if (!open) return;
     setUrl(initialUrl);
+    setVnum('');
+    api.get<{ cookieConfigured: boolean }>('/api/import/sources').then((s) => setCookieConfigured(s.cookieConfigured)).catch(() => {});
     setDraft(null);
     setError('');
     setMaterials(null);
-    if (initialUrl) fetchDraft(initialUrl);
+    if (initialUrl) fetchDraft(initialUrl, '');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, initialUrl]);
 
@@ -69,12 +74,12 @@ export function ImportDialog({
     return () => window.removeEventListener('keydown', onKey);
   }, [open, loading, onClose]);
 
-  const fetchDraft = async (u: string) => {
+  const fetchDraft = async (u: string, requestedVnum = vnum) => {
     setLoading(true);
     setError('');
     setDraft(null);
     try {
-      const d = await api.post<ImportDraft>('/api/import/url', { url: u });
+      const d = await api.post<ImportDraft>('/api/import/url', { url: u, ...(requestedVnum ? { vnum: Number(requestedVnum) } : {}) });
       setDraft(d);
       setUseIcon(!!d.assets.iconUrl);
       setUseModel(!!d.assets.modelUrl);
@@ -143,7 +148,7 @@ export function ImportDialog({
           {refreshOf ? 'Kaynaktan güncelle' : 'Linkten içe aktar'}
         </h2>
         <p className="mt-1 text-sm text-slate-400">
-          metin2alerts.com item sayfasının linkini yapıştırın. Veriler okunur ve düzenleyicide taslak olarak açılır; siz kaydedene kadar hiçbir şey değişmez.
+          Metin2Alerts eşya / canavar / NPC veya m2icondb eşya / canavar / 3D bağlantısını yapıştırın. Özellikleri kontrol edip kaydedin; model ve dokular kayıt sırasında indirilir.
         </p>
 
         <form onSubmit={submit} className="mt-4 flex gap-2">
@@ -156,10 +161,35 @@ export function ImportDialog({
             autoFocus
             disabled={!!refreshOf}
           />
-          <button className="btn-primary shrink-0" disabled={loading || !url.trim()}>
+          <button className="btn-primary shrink-0" disabled={loading || cookieBusy || !url.trim()}>
             {loading && <Spinner />} {draft ? 'Yeniden oku' : 'Getir'}
           </button>
         </form>
+        <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-slate-400">
+          <label>Vnum (3D linkinde yoksa)
+            <input className="input mt-1" type="number" min="1" max="2000000000" value={vnum} onChange={(e) => setVnum(e.target.value)} placeholder="Otomatik" disabled={loading} />
+          </label>
+          <label className="btn-ghost btn-sm cursor-pointer">
+            {cookieBusy ? 'Yükleniyor…' : cookieConfigured ? 'Çerezi yenile (cookies.txt)' : 'Çerez yükle (cookies.txt)'}
+            <input className="hidden" type="file" accept=".txt" disabled={cookieBusy || loading} onChange={async (e) => {
+              const file = e.target.files?.[0];
+              e.target.value = '';
+              if (!file) return;
+              setCookieBusy(true);
+              try {
+                await uploadFile('/api/import/cookies', file);
+                setCookieConfigured(true);
+                toast('success', 'Çerez yüklendi. Bağlantıyı yeniden getirebilirsiniz.');
+              } catch (error) { setError((error as Error).message); }
+              finally { setCookieBusy(false); }
+            }} />
+          </label>
+          {cookieConfigured && <button className="btn-ghost btn-sm" disabled={cookieBusy || loading} onClick={async () => {
+            try { await api.del('/api/import/cookies'); setCookieConfigured(false); }
+            catch (error) { setError((error as Error).message); }
+          }}>Çerezi sil</button>}
+          <span>m2icondb modelleri için çerez gerekmez.</span>
+        </div>
         {error && <p className="mt-3 rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-300">{error}</p>}
 
         {draft && it && (

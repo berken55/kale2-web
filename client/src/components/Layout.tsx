@@ -3,10 +3,13 @@ import { NavLink, Outlet } from 'react-router-dom';
 import { useAuth } from '../auth';
 
 const NAV = [
-  { to: '/', label: 'Genel Bakış', end: true, icon: 'M3 12l9-9 9 9M5 10v10h5v-6h4v6h5V10' },
-  { to: '/items', label: 'Itemler', end: false, icon: 'M14.5 3.5l6 6L9 21H3v-6zM12 6l6 6' },
-  { to: '/bonuses', label: 'Bonus Tanımları', end: false, icon: 'M12 3l2.6 5.6L21 9.3l-4.5 4.4 1 6.3L12 17l-5.5 3 1-6.3L3 9.3l6.4-.7z' },
-  { to: '/data', label: 'İçe / Dışa Aktar', end: false, icon: 'M12 3v12m0 0l-4-4m4 4l4-4M4 17v3h16v-3' },
+  { to: '/admin', label: 'Genel Bakış', end: true, icon: 'M3 12l9-9 9 9M5 10v10h5v-6h4v6h5V10' },
+  { to: '/admin/items', label: 'Itemler', end: false, icon: 'M14.5 3.5l6 6L9 21H3v-6zM12 6l6 6' },
+  { to: '/admin/monsters', label: 'Canavarlar', end: false, icon: 'M5 9l2-5 3 4h4l3-4 2 5v4a7 7 0 01-14 0zM9 13h.01M15 13h.01M10 17h4' },
+  { to: '/admin/drop-groups', label: 'Drop Grupları', end: false, icon: 'M4 7l8-4 8 4-8 4zM4 12l8 4 8-4M4 17l8 4 8-4' },
+  { to: '/admin/level-drops', label: 'Genel Drop', end: false, icon: 'M12 3v14m0 0l-5-5m5 5l5-5M5 21h14' },
+  { to: '/admin/bonuses', label: 'Bonus Tanımları', end: false, icon: 'M12 3l2.6 5.6L21 9.3l-4.5 4.4 1 6.3L12 17l-5.5 3 1-6.3L3 9.3l6.4-.7z' },
+  { to: '/admin/data', label: 'İçe / Dışa Aktar', end: false, icon: 'M12 3v12m0 0l-4-4m4 4l4-4M4 17v3h16v-3' },
 ];
 
 function Icon({ d }: { d: string }) {
@@ -61,7 +64,11 @@ export function Layout() {
         {nav}
         <a href="/wiki" target="_blank" rel="noreferrer" className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-slate-400 hover:bg-white/5 hover:text-slate-200">
           <Icon d="M4 5a2 2 0 012-2h13v16H6a2 2 0 00-2 2zM4 5v16M8 7h7" />
-          Item Wiki ↗
+          Wiki ↗
+        </a>
+        <a href="/" target="_blank" rel="noreferrer" className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-slate-400 hover:bg-white/5 hover:text-slate-200">
+          <Icon d="M4 12h16M12 4v16" />
+          Website ↗
         </a>
         <div className="mt-auto rounded-lg border border-white/5 p-3 text-xs text-slate-400">
           <div className="truncate">

@@ -32,6 +32,7 @@ export function DashboardPage() {
     { label: 'Toplam item', value: stats.totalItems },
     { label: '3D modeli olan', value: stats.withModel, sub: stats.totalItems ? `%${Math.round((stats.withModel / stats.totalItems) * 100)}` : '' },
     { label: 'İkonu olan', value: stats.withIcon, sub: stats.totalItems ? `%${Math.round((stats.withIcon / stats.totalItems) * 100)}` : '' },
+    { label: 'Canavar', value: stats.totalMonsters },
     { label: 'Bonus tanımı', value: stats.bonusTypes },
   ];
   const maxType = Math.max(1, ...stats.byType.map((t) => t.count));
@@ -42,13 +43,13 @@ export function DashboardPage() {
         title="Genel Bakış"
         subtitle="Item veritabanının özeti ve son değişiklikler"
         actions={
-          <Link to="/items/new" className="btn-primary">
+          <Link to="/admin/items/new" className="btn-primary">
             + Yeni item
           </Link>
         }
       />
 
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
         {tiles.map((t) => (
           <div key={t.label} className="card p-5">
             <div className="text-xs uppercase tracking-wide text-slate-500">{t.label}</div>
@@ -67,7 +68,7 @@ export function DashboardPage() {
           <ul className="space-y-3">
             {stats.byType.map((t) => (
               <li key={t.type}>
-                <Link to={`/items?type=${t.type}`} className="group block">
+                <Link to={`/admin/items?type=${t.type}`} className="group block">
                   <div className="mb-1 flex justify-between text-sm">
                     <span className="text-slate-300 group-hover:text-gold-300">{labelOf(ITEM_TYPES, t.type)}</span>
                     <span className="tabular-nums text-slate-500">{t.count}</span>
@@ -88,7 +89,7 @@ export function DashboardPage() {
               const count = stats.byRarity.find((x) => x.rarity === r.value)?.count ?? 0;
               return (
                 <li key={r.value}>
-                  <Link to={`/items?rarity=${r.value}`} className="flex items-center justify-between rounded-md px-2 py-1.5 text-sm hover:bg-white/5">
+                  <Link to={`/admin/items?rarity=${r.value}`} className="flex items-center justify-between rounded-md px-2 py-1.5 text-sm hover:bg-white/5">
                     <span className="flex items-center gap-2">
                       <span className="h-2.5 w-2.5 rounded-full" style={{ background: r.color }} />
                       <span style={{ color: r.color }}>{r.label}</span>
@@ -108,7 +109,7 @@ export function DashboardPage() {
             {stats.recentActivity.map((a) => (
               <li key={a.id} className="text-sm">
                 {a.entity === 'item' && a.action !== 'delete' && a.entityId ? (
-                  <Link to={`/items/${a.entityId}`} className="text-slate-200 hover:text-gold-300">
+                  <Link to={`/admin/items/${a.entityId}`} className="text-slate-200 hover:text-gold-300">
                     {a.summary}
                   </Link>
                 ) : (

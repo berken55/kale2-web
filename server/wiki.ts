@@ -1,8 +1,9 @@
 import express, { type Router } from 'express';
 import { z } from 'zod';
-import type { BonusType, WikiCatalog, WikiItemDetail, WikiMaterialRef } from '../shared/types.ts';
+import type { BonusType, WikiCatalog, WikiItemDetail, WikiMaterialRef, WikiMonsterListResponse } from '../shared/types.ts';
 import type { DB } from './db.ts';
 import { getItem, listItems } from './items.ts';
+import { getMonsterByVnum, listMonsters } from './monsters.ts';
 
 /** Oyuncuların görebileceği, giriş gerektirmeyen salt okunur item wiki API'si. */
 export function wikiRouter(db: DB): Router {
@@ -95,6 +96,36 @@ export function wikiRouter(db: DB): Router {
 
     const detail: WikiItemDetail = { item, level, bonusTypes, materials };
     res.json(detail);
+  });
+
+  // ---- Canavarlar ----
+  const monsterListSchema = z.object({
+    search: z.string().trim().max(64).optional(),
+    rank: z.string().max(16).optional(),
+    page: z.coerce.number().int().min(1).default(1),
+    pageSize: z.coerce.number().int().min(1).max(100).default(50),
+  });
+
+  router.get('/monsters', (req, res) => {
+    const q = monsterListSchema.parse(req.query);
+    const list: WikiMonsterListResponse = listMonsters(db, {
+      search: q.search || undefined,
+      rank: q.rank || undefined,
+      sort: 'level',
+      page: q.page,
+      pageSize: q.pageSize,
+    });
+    res.json(list);
+  });
+
+  router.get('/monsters/:vnum', (req, res) => {
+    const vnum = Number(req.params.vnum);
+    if (!Number.isInteger(vnum) || vnum < 1) return res.status(400).json({ error: 'Geçersiz vnum.' });
+    const monster = getMonsterByVnum(db, vnum);
+    if (!monster) return res.status(404).json({ error: 'Canavar bulunamadı.' });
+    // Oyun koduna ve kaynak adresine oyuncuların ihtiyacı yok
+    const { code: _code, sourceUrl: _source, ...pub } = monster;
+    res.json(pub);
   });
 
   return router;

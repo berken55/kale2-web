@@ -2,6 +2,8 @@ import Database from 'better-sqlite3';
 import fs from 'node:fs';
 import path from 'node:path';
 import { DEFAULT_BONUS_TYPES } from '../shared/constants.ts';
+import { convertLegacyMonster } from './monster-convert.ts';
+import { insertMonster, uniqueMonsterCode } from './monsters.ts';
 
 export type DB = Database.Database;
 
@@ -66,6 +68,110 @@ CREATE TABLE IF NOT EXISTS item_upgrades (
   PRIMARY KEY (item_id, level)
 );
 
+CREATE TABLE IF NOT EXISTS monsters (
+  id              INTEGER PRIMARY KEY AUTOINCREMENT,
+  vnum            INTEGER NOT NULL UNIQUE,
+  code            TEXT NOT NULL UNIQUE,
+  name            TEXT NOT NULL,
+  rank            TEXT NOT NULL DEFAULT 'NORMAL',
+  level           INTEGER NOT NULL DEFAULT 1,
+  race            TEXT NOT NULL DEFAULT '',
+  element         TEXT NOT NULL DEFAULT '',
+  hp              INTEGER NOT NULL DEFAULT 1,
+  hp_regen_pct    INTEGER NOT NULL DEFAULT 0,
+  hp_regen_sec    INTEGER NOT NULL DEFAULT 0,
+  exp             INTEGER NOT NULL DEFAULT 0,
+  damage_min      INTEGER NOT NULL DEFAULT 0,
+  damage_max      INTEGER NOT NULL DEFAULT 0,
+  defense         INTEGER NOT NULL DEFAULT 0,
+  stat_str        INTEGER NOT NULL DEFAULT 0,
+  stat_dex        INTEGER NOT NULL DEFAULT 0,
+  stat_vit        INTEGER NOT NULL DEFAULT 0,
+  stat_int        INTEGER NOT NULL DEFAULT 0,
+  attack_speed    INTEGER NOT NULL DEFAULT 100,
+  move_speed      INTEGER NOT NULL DEFAULT 100,
+  attack_range    REAL NOT NULL DEFAULT 1.5,
+  aggressive      INTEGER NOT NULL DEFAULT 0,
+  aggro_range     REAL NOT NULL DEFAULT 8,
+  yang_min        INTEGER NOT NULL DEFAULT 0,
+  yang_max        INTEGER NOT NULL DEFAULT 0,
+  resists         TEXT NOT NULL DEFAULT '{}',
+  abilities       TEXT NOT NULL DEFAULT '{}',
+  flags           TEXT NOT NULL DEFAULT '[]',
+  model_path      TEXT,
+  model_file_name TEXT,
+  model_scale     REAL NOT NULL DEFAULT 1,
+  icon_path       TEXT,
+  description     TEXT NOT NULL DEFAULT '',
+  source_url      TEXT,
+  created_at      TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at      TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_monsters_level ON monsters(rank, level);
+CREATE INDEX IF NOT EXISTS idx_monsters_name ON monsters(name);
+
+-- Drop oranları Metin2 geleneğine uygun olarak 1/1.000.000 (ppm) tamsayı tutulur; panel yüzde gösterir.
+-- Yeniden kullanılabilir drop listesi ("Kurt derisi grubu", "Boss sandığı")
+CREATE TABLE IF NOT EXISTS drop_groups (
+  id          INTEGER PRIMARY KEY AUTOINCREMENT,
+  code        TEXT NOT NULL UNIQUE,
+  name        TEXT NOT NULL,
+  roll_mode   TEXT NOT NULL DEFAULT 'EACH',  -- EACH: her satır ayrı zar | ONE_OF: ağırlıklı tek seçim
+  rolls       INTEGER NOT NULL DEFAULT 1,     -- ONE_OF için kaç kez seçilir
+  description TEXT NOT NULL DEFAULT ''
+);
+
+CREATE TABLE IF NOT EXISTS drop_group_entries (
+  id          INTEGER PRIMARY KEY AUTOINCREMENT,
+  group_id    INTEGER NOT NULL REFERENCES drop_groups(id) ON DELETE CASCADE,
+  item_vnum   INTEGER NOT NULL REFERENCES items(vnum) ON UPDATE CASCADE,
+  chance_ppm  INTEGER NOT NULL,               -- EACH: olasılık | ONE_OF: ağırlık
+  count_min   INTEGER NOT NULL DEFAULT 1,
+  count_max   INTEGER NOT NULL DEFAULT 1,
+  upgrade_min INTEGER NOT NULL DEFAULT 0,
+  upgrade_max INTEGER NOT NULL DEFAULT 0,
+  sort        INTEGER NOT NULL DEFAULT 0,
+  CHECK (chance_ppm BETWEEN 0 AND 1000000), CHECK (count_min <= count_max), CHECK (upgrade_min <= upgrade_max)
+);
+
+-- Yaratık → drop (doğrudan item veya grup)
+CREATE TABLE IF NOT EXISTS monster_drops (
+  id          INTEGER PRIMARY KEY AUTOINCREMENT,
+  monster_id  INTEGER NOT NULL REFERENCES monsters(id) ON DELETE CASCADE,
+  item_vnum   INTEGER REFERENCES items(vnum) ON UPDATE CASCADE,
+  group_id    INTEGER REFERENCES drop_groups(id),
+  chance_ppm  INTEGER NOT NULL,
+  count_min   INTEGER NOT NULL DEFAULT 1,
+  count_max   INTEGER NOT NULL DEFAULT 1,
+  upgrade_min INTEGER NOT NULL DEFAULT 0,
+  upgrade_max INTEGER NOT NULL DEFAULT 0,
+  sort        INTEGER NOT NULL DEFAULT 0,
+  CHECK ((item_vnum IS NULL) <> (group_id IS NULL)),
+  CHECK (chance_ppm BETWEEN 0 AND 1000000), CHECK (count_min <= count_max), CHECK (upgrade_min <= upgrade_max)
+);
+
+CREATE INDEX IF NOT EXISTS idx_monster_drops_monster ON monster_drops(monster_id);
+
+-- Seviye aralığına göre her yaratıkta geçerli genel drop (Metin2 common_drop_item)
+CREATE TABLE IF NOT EXISTS level_drops (
+  id          INTEGER PRIMARY KEY AUTOINCREMENT,
+  level_min   INTEGER NOT NULL,
+  level_max   INTEGER NOT NULL,
+  ranks       TEXT NOT NULL DEFAULT '["NORMAL","ELITE"]',
+  item_vnum   INTEGER REFERENCES items(vnum) ON UPDATE CASCADE,
+  group_id    INTEGER REFERENCES drop_groups(id),
+  chance_ppm  INTEGER NOT NULL,
+  count_min   INTEGER NOT NULL DEFAULT 1,
+  count_max   INTEGER NOT NULL DEFAULT 1,
+  upgrade_min INTEGER NOT NULL DEFAULT 0,
+  upgrade_max INTEGER NOT NULL DEFAULT 0,
+  sort        INTEGER NOT NULL DEFAULT 0,
+  CHECK ((item_vnum IS NULL) <> (group_id IS NULL)),
+  CHECK (level_min <= level_max),
+  CHECK (chance_ppm BETWEEN 0 AND 1000000), CHECK (count_min <= count_max), CHECK (upgrade_min <= upgrade_max)
+);
+
 CREATE TABLE IF NOT EXISTS activity_log (
   id         INTEGER PRIMARY KEY AUTOINCREMENT,
   action     TEXT NOT NULL,
@@ -90,7 +196,49 @@ export function openDatabase(file: string): DB {
 /** Eski veritabanlarına sonradan eklenen sütunları ekler. */
 function migrate(db: DB) {
   const columns = new Set((db.prepare('PRAGMA table_info(items)').all() as Array<{ name: string }>).map((c) => c.name));
+  if (!columns.has('monster_stats')) db.exec("ALTER TABLE items ADD COLUMN monster_stats TEXT NOT NULL DEFAULT '{}'");
   if (!columns.has('source_url')) db.exec('ALTER TABLE items ADD COLUMN source_url TEXT');
+  moveMonstersOutOfItems(db);
+}
+
+/**
+ * Canavarlar eskiden items tablosunda type = 'MONSTER' olarak tutuluyordu (statlar monster_stats
+ * JSON'unda). Bu satırları monsters tablosuna taşır; ikon ve model dosyaları yerinde kalır.
+ */
+function moveMonstersOutOfItems(db: DB) {
+  const rows = db.prepare("SELECT * FROM items WHERE type = 'MONSTER' ORDER BY vnum").all() as Array<Record<string, unknown>>;
+  if (!rows.length) return;
+  db.transaction(() => {
+    let moved = 0;
+    for (const r of rows) {
+      const vnum = r.vnum as number;
+      if (db.prepare('SELECT 1 FROM monsters WHERE vnum = ?').get(vnum)) {
+        throw new Error(`Canavar taşıma: ${vnum} vnum'u hem items hem monsters tablosunda var.`);
+      }
+      const input = convertLegacyMonster({
+        vnum,
+        name: r.name as string,
+        subtype: r.subtype as string,
+        level: r.level_required as number,
+        damageMin: r.min_attack as number,
+        damageMax: r.max_attack as number,
+        defense: r.defense as number,
+        stats: JSON.parse((r.monster_stats as string) || '{}'),
+        description: r.description as string,
+        sourceUrl: r.source_url as string | null,
+      });
+      input.code = uniqueMonsterCode(db, input.code, vnum);
+      insertMonster(db, input, {
+        icon_path: r.icon_path as string | null,
+        model_path: r.model_path as string | null,
+        model_file_name: r.model_file_name as string | null,
+        created_at: r.created_at as string,
+      });
+      moved++;
+    }
+    db.prepare("DELETE FROM items WHERE type = 'MONSTER'").run();
+    logActivity(db, 'import', 'system', null, `${moved} canavar items tablosundan monsters tablosuna taşındı`);
+  })();
 }
 
 function seedBonusTypes(db: DB) {

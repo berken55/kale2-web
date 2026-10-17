@@ -31,6 +31,14 @@ export const CATEGORY_GROUPS: CategoryGroup[] = [
   },
 ];
 
+/** Wiki menüsündeki canavar bağlantıları (canavarlar ayrı tabloda, item kategorisi değil). */
+export const MONSTER_LINKS = [
+  { label: 'Tüm canavarlar', path: '/wiki/canavarlar', rank: '' },
+  { label: 'Bosslar', path: '/wiki/canavarlar?rank=BOSS', rank: 'BOSS' },
+  { label: 'Seçkinler', path: '/wiki/canavarlar?rank=ELITE', rank: 'ELITE' },
+  { label: 'Metin taşları', path: '/wiki/canavarlar?rank=STONE', rank: 'STONE' },
+] as const;
+
 export function findCategory(type?: string, subtype?: string) {
   for (const g of CATEGORY_GROUPS) {
     const c = g.categories.find((x) => x.type.toLowerCase() === type?.toLowerCase() && x.subtype.toLowerCase() === subtype?.toLowerCase());

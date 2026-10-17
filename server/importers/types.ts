@@ -19,6 +19,8 @@ export interface RawLevel {
 
 /** Bir site okuyucusunun sayfadan çıkarabildiği ham veriler (her alan opsiyonel). */
 export interface RawItem {
+  warnings?: string[];
+  monsterStats?: Record<string, number | string>;
   vnum?: number;
   name?: string;
   type?: string;

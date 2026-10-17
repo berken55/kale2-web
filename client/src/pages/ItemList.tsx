@@ -23,7 +23,7 @@ export function ItemListPage() {
   const openImported = (r: ImportResult & { target: 'new' | 'existing' }) => {
     const state: ImportState = { importDraft: r.draft, importAssets: r.assets };
     setImportOpen(false);
-    navigate(r.target === 'existing' && r.draft.existingItemId ? `/items/${r.draft.existingItemId}` : '/items/new', { state });
+    navigate(r.target === 'existing' && r.draft.existingItemId ? `/admin/items/${r.draft.existingItemId}` : '/admin/items/new', { state });
   };
 
   const type = params.get('type') ?? '';
@@ -75,7 +75,7 @@ export function ItemListPage() {
     try {
       const copy = await api.post<Item>(`/api/items/${id}/clone`);
       toast('success', `Kopya oluşturuldu (#${copy.vnum}).`);
-      navigate(`/items/${copy.id}`);
+      navigate(`/admin/items/${copy.id}`);
     } catch (e) {
       toast('error', (e as Error).message);
     }
@@ -94,7 +94,7 @@ export function ItemListPage() {
             <button className="btn-ghost" onClick={() => setImportOpen(true)}>
               Linkten içe aktar
             </button>
-            <Link to="/items/new" className="btn-primary">
+            <Link to="/admin/items/new" className="btn-primary">
               + Yeni item
             </Link>
           </>
@@ -186,7 +186,7 @@ export function ItemListPage() {
             text={hasFilters ? 'Filtreleri değiştirmeyi deneyin.' : 'İlk itemi oluşturarak başlayın ya da JSON dosyasından içe aktarın.'}
             action={
               !hasFilters && (
-                <Link to="/items/new" className="btn-primary">
+                <Link to="/admin/items/new" className="btn-primary">
                   + Yeni item
                 </Link>
               )
@@ -211,7 +211,7 @@ export function ItemListPage() {
                 {data?.items.map((item) => (
                   <tr key={item.id} className="hover:bg-white/[0.02]">
                     <td className="table-cell">
-                      <Link to={`/items/${item.id}`} className="flex items-center gap-3 font-medium text-slate-100 hover:text-gold-300">
+                      <Link to={`/admin/items/${item.id}`} className="flex items-center gap-3 font-medium text-slate-100 hover:text-gold-300">
                         <ItemIcon url={item.iconUrl} name={item.name} rarity={item.rarity} size={36} />
                         {item.name}
                       </Link>
@@ -233,7 +233,7 @@ export function ItemListPage() {
                     </td>
                     <td className="table-cell">
                       <div className="flex justify-end gap-1.5">
-                        <Link to={`/items/${item.id}`} className="btn-ghost btn-sm">
+                        <Link to={`/admin/items/${item.id}`} className="btn-ghost btn-sm">
                           Düzenle
                         </Link>
                         <button className="btn-ghost btn-sm" onClick={() => clone(item.id)}>

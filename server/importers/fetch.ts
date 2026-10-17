@@ -13,7 +13,7 @@ export class FetchError extends Error {
   }
 }
 
-const DEFAULT_ALLOWED = ['metin2alerts.com'];
+const DEFAULT_ALLOWED = ['metin2alerts.com', 'm2icondb.com'];
 
 export function allowedHosts(): string[] {
   const env = process.env.IMPORT_ALLOWED_HOSTS;

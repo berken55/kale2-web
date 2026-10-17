@@ -15,6 +15,8 @@ import {
 import type { BonusType, DashboardStats } from '../shared/types.ts';
 import { authRouter, requireAuth, type AuthConfig } from './auth.ts';
 import { logActivity, type DB } from './db.ts';
+import { dropsRouter, dropUsageOfItem } from './drops.ts';
+import { HttpError } from './http-error.ts';
 import {
   createItem,
   findBonusLimitViolation,
@@ -28,9 +30,29 @@ import {
   vnumTaken,
 } from './items.ts';
 import { allowedHosts, FetchError, safeFetch } from './importers/fetch.ts';
-import { IMPORTERS, importFromUrl } from './importers/index.ts';
+import { IMPORTERS, importFromUrl, importMonsterFromUrl } from './importers/index.ts';
+import { downloadModel, isModelSource, protectedIcon } from './importers/model-service.ts';
+import {
+  getMonster,
+  getMonsterRow,
+  insertMonster,
+  listMonsters,
+  monsterCodeTaken,
+  monsterToInput,
+  monsterVnumTaken,
+  nextMonsterVnum,
+  uniqueMonsterCode,
+  updateMonster,
+} from './monsters.ts';
 import { wikiRouter } from './wiki.ts';
-import { bonusTypeInputSchema, formatZodError, itemInputSchema, type ItemInput } from './validation.ts';
+import {
+  bonusTypeInputSchema,
+  formatZodError,
+  itemInputSchema,
+  monsterInputSchema,
+  type ItemInput,
+  type MonsterInputParsed,
+} from './validation.ts';
 
 export interface AppOptions {
   db: DB;
@@ -39,17 +61,9 @@ export interface AppOptions {
   clientDir?: string;
   /** Giriş gerektirmeyen item wiki'si (varsayılan: açık) */
   publicWiki?: boolean;
+  importPrivateDir?: string;
 }
 
-class HttpError extends Error {
-  constructor(
-    public status: number,
-    message: string,
-    public extra: Record<string, unknown> = {},
-  ) {
-    super(message);
-  }
-}
 
 const idParam = (req: Request) => {
   const id = Number(req.params.id);
@@ -72,6 +86,18 @@ function parseItemInput(db: DB, body: unknown, exceptId?: number): ItemInput {
   return input;
 }
 
+function parseMonsterInput(db: DB, body: unknown, exceptId?: number): MonsterInputParsed {
+  const parsed = monsterInputSchema.safeParse(body);
+  if (!parsed.success) {
+    const f = formatZodError(parsed.error);
+    throw new HttpError(400, f.error, { issues: f.issues });
+  }
+  const input = parsed.data;
+  if (monsterVnumTaken(db, input.vnum, exceptId)) throw new HttpError(409, `${input.vnum} vnum'u başka bir canavar tarafından kullanılıyor.`);
+  if (monsterCodeTaken(db, input.code, exceptId)) throw new HttpError(409, `"${input.code}" oyun kodu başka bir canavar tarafından kullanılıyor.`);
+  return input;
+}
+
 function mapBonusType(row: Record<string, unknown>): BonusType {
   return {
     id: row.id as number,
@@ -83,7 +109,7 @@ function mapBonusType(row: Record<string, unknown>): BonusType {
   };
 }
 
-export function createApp({ db, uploadDir, auth, clientDir, publicWiki = true }: AppOptions) {
+export function createApp({ db, uploadDir, auth, clientDir, publicWiki = true, importPrivateDir = `${uploadDir}-private` }: AppOptions) {
   const app = express();
   app.disable('x-powered-by');
   app.set('trust proxy', 'loopback');
@@ -143,6 +169,7 @@ export function createApp({ db, uploadDir, auth, clientDir, publicWiki = true }:
     const count = (sql: string) => (db.prepare(sql).get() as { c: number }).c;
     const stats: DashboardStats = {
       totalItems: count('SELECT COUNT(*) AS c FROM items'),
+      totalMonsters: count('SELECT COUNT(*) AS c FROM monsters'),
       withModel: count('SELECT COUNT(*) AS c FROM items WHERE model_path IS NOT NULL'),
       withIcon: count('SELECT COUNT(*) AS c FROM items WHERE icon_path IS NOT NULL'),
       bonusTypes: count('SELECT COUNT(*) AS c FROM bonus_types'),
@@ -286,6 +313,8 @@ export function createApp({ db, uploadDir, auth, clientDir, publicWiki = true }:
     const id = idParam(req);
     const row = getItemRow(db, id);
     if (!row) throw new HttpError(404, 'Item bulunamadı.');
+    const usage = dropUsageOfItem(db, row.vnum);
+    if (usage) throw new HttpError(409, `Bu item ${usage} drop satırında kullanılıyor; önce droplardan kaldırın.`);
     db.prepare('DELETE FROM items WHERE id = ?').run(id);
     removeUpload(row.icon_path);
     removeUpload(row.model_path);
@@ -294,67 +323,119 @@ export function createApp({ db, uploadDir, auth, clientDir, publicWiki = true }:
   });
 
   // ---- Medya (ikon / 3D model) ----
-  /** Yüklenen dosyayı iteme bağlar ve eski dosyayı siler. */
-  const attachMedia = (id: number, kind: 'icon' | 'model', rel: string, originalName: string) => {
-    const row = getItemRow(db, id)!;
+  // Itemler ve canavarlar aynı sütun adlarını (icon_path, model_path, model_file_name) kullanır.
+  type MediaRow = { name: string; vnum: number; icon_path: string | null; model_path: string | null };
+  interface MediaEntity {
+    route: 'items' | 'monsters';
+    table: 'items' | 'monsters';
+    entity: 'item' | 'monster';
+    notFound: string;
+    getRow: (id: number) => MediaRow | undefined;
+    getDto: (id: number) => object | null;
+  }
+  const ITEM_MEDIA: MediaEntity = {
+    route: 'items',
+    table: 'items',
+    entity: 'item',
+    notFound: 'Item bulunamadı.',
+    getRow: (id) => getItemRow(db, id),
+    getDto: (id) => getItem(db, id),
+  };
+  const MONSTER_MEDIA: MediaEntity = {
+    route: 'monsters',
+    table: 'monsters',
+    entity: 'monster',
+    notFound: 'Canavar bulunamadı.',
+    getRow: (id) => getMonsterRow(db, id),
+    getDto: (id) => getMonster(db, id),
+  };
+
+  /** Yüklenen dosyayı kayda bağlar ve eski dosyayı siler. */
+  const attachMedia = (e: MediaEntity, id: number, kind: 'icon' | 'model', rel: string, originalName: string) => {
+    const row = e.getRow(id)!;
     if (kind === 'icon') {
-      db.prepare("UPDATE items SET icon_path = ?, updated_at = datetime('now') WHERE id = ?").run(rel, id);
+      db.prepare(`UPDATE ${e.table} SET icon_path = ?, updated_at = datetime('now') WHERE id = ?`).run(rel, id);
       removeUpload(row.icon_path);
     } else {
-      db.prepare("UPDATE items SET model_path = ?, model_file_name = ?, updated_at = datetime('now') WHERE id = ?").run(
+      db.prepare(`UPDATE ${e.table} SET model_path = ?, model_file_name = ?, updated_at = datetime('now') WHERE id = ?`).run(
         rel,
         originalName.slice(0, 200),
         id,
       );
       removeUpload(row.model_path);
     }
-    logActivity(db, 'upload', 'item', id, `${kind === 'icon' ? 'İkon' : '3D model'} yüklendi: ${row.name} (#${row.vnum})`);
+    logActivity(db, 'upload', e.entity, id, `${kind === 'icon' ? 'İkon' : '3D model'} yüklendi: ${row.name} (#${row.vnum})`);
   };
 
-  const mediaRoutes = (kind: 'icon' | 'model') => {
+  const mediaRoutes = (e: MediaEntity, kind: 'icon' | 'model') => {
     const sub = kind === 'icon' ? 'icons' : 'models';
     const run = kind === 'icon' ? uploadIcon : uploadModel;
     const label = kind === 'icon' ? 'İkon' : '3D model';
 
-    api.post(`/items/:id/${kind}`, (req, res, next) => handleUpload(req, res).catch(next));
+    api.post(`/${e.route}/:id/${kind}`, (req, res, next) => handleUpload(req, res).catch(next));
 
     const handleUpload = async (req: Request, res: Response) => {
       const id = idParam(req);
-      const row = getItemRow(db, id);
-      if (!row) throw new HttpError(404, 'Item bulunamadı.');
+      if (!e.getRow(id)) throw new HttpError(404, e.notFound);
       await run(req, res);
       if (!req.file) throw new HttpError(400, 'Dosya gönderilmedi.');
-      attachMedia(id, kind, `${sub}/${req.file.filename}`, path.basename(req.file.originalname));
-      res.json(getItem(db, id));
+      attachMedia(e, id, kind, `${sub}/${req.file.filename}`, path.basename(req.file.originalname));
+      res.json(e.getDto(id));
     };
 
-    api.delete(`/items/:id/${kind}`, (req, res) => {
+    api.delete(`/${e.route}/:id/${kind}`, (req, res) => {
       const id = idParam(req);
-      const row = getItemRow(db, id);
-      if (!row) throw new HttpError(404, 'Item bulunamadı.');
+      const row = e.getRow(id);
+      if (!row) throw new HttpError(404, e.notFound);
       if (kind === 'icon') {
-        db.prepare("UPDATE items SET icon_path = NULL, updated_at = datetime('now') WHERE id = ?").run(id);
+        db.prepare(`UPDATE ${e.table} SET icon_path = NULL, updated_at = datetime('now') WHERE id = ?`).run(id);
         removeUpload(row.icon_path);
       } else {
         db.prepare(
-          "UPDATE items SET model_path = NULL, model_file_name = NULL, updated_at = datetime('now') WHERE id = ?",
+          `UPDATE ${e.table} SET model_path = NULL, model_file_name = NULL, updated_at = datetime('now') WHERE id = ?`,
         ).run(id);
         removeUpload(row.model_path);
       }
-      logActivity(db, 'delete', 'item', id, `${label} kaldırıldı: ${row.name} (#${row.vnum})`);
-      res.json(getItem(db, id));
+      logActivity(db, 'delete', e.entity, id, `${label} kaldırıldı: ${row.name} (#${row.vnum})`);
+      res.json(e.getDto(id));
     });
   };
-  mediaRoutes('icon');
-  mediaRoutes('model');
+  for (const e of [ITEM_MEDIA, MONSTER_MEDIA]) {
+    mediaRoutes(e, 'icon');
+    mediaRoutes(e, 'model');
+  }
 
   // ---- Harici siteden içe aktarma ----
+  fs.mkdirSync(importPrivateDir, { recursive: true, mode: 0o700 });
+  const cookieFile = path.join(importPrivateDir, 'metin2alerts-cookies.txt');
+  const currentCookie = () => fs.existsSync(cookieFile) ? cookieFile : undefined;
+  const cookieUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 64 * 1024, files: 1 } }).single('file');
+  api.post('/import/cookies', (req, res, next) => {
+    (async () => {
+      await runUpload(cookieUpload)(req, res);
+      const text = req.file?.buffer.toString('utf8');
+      if (!text || !text.split(/\r?\n/).some((line) => /^(?:#HttpOnly_)?\.?metin2alerts\.com\t/.test(line) && line.split('\t').length === 7)) {
+        throw new HttpError(400, 'Metin2Alerts için Netscape biçiminde cookies.txt yükleyin.');
+      }
+      const temp = path.join(importPrivateDir, `${crypto.randomUUID()}.tmp`);
+      try {
+        await fs.promises.writeFile(temp, text, { mode: 0o600 });
+        await fs.promises.rename(temp, cookieFile);
+      } finally { await fs.promises.rm(temp, { force: true }); }
+      res.json({ cookieConfigured: true });
+    })().catch(next);
+  });
+  api.delete('/import/cookies', (_req, res) => {
+    fs.rmSync(cookieFile, { force: true });
+    res.status(204).end();
+  });
   api.get('/import/sources', (_req, res) => {
-    res.json({ sources: IMPORTERS.map((i) => ({ id: i.id, name: i.name, example: i.example })), allowedHosts: allowedHosts() });
+    res.json({ sources: IMPORTERS.map((i) => ({ id: i.id, name: i.name, example: i.example })), allowedHosts: allowedHosts(), cookieConfigured: !!currentCookie() });
   });
 
   const importUrlSchema = z.object({
-    url: z.string().min(1).max(500),
+    url: z.string().min(1).max(2000),
+    vnum: z.number().int().min(1).max(2_000_000_000).optional(),
     type: z.string().max(32).optional(),
     subtype: z.string().max(32).optional(),
   });
@@ -362,7 +443,7 @@ export function createApp({ db, uploadDir, auth, clientDir, publicWiki = true }:
   api.post('/import/url', (req, res, next) => {
     const body = importUrlSchema.parse(req.body);
     const override = body.type && body.subtype ? { type: body.type, subtype: body.subtype } : undefined;
-    importFromUrl(db, body.url, override)
+    importFromUrl(db, body.url, override, { cookieFile: currentCookie(), vnum: body.vnum })
       .then((draft) => res.json(draft))
       .catch(next);
   });
@@ -376,24 +457,129 @@ export function createApp({ db, uploadDir, auth, clientDir, publicWiki = true }:
     'model/gltf+json': '.gltf',
   };
 
-  /** Kaynak sitedeki ikon veya 3D modeli indirip iteme bağlar. */
-  api.post('/items/:id/remote-media', (req, res, next) => {
-    const id = idParam(req);
-    const row = getItemRow(db, id);
-    if (!row) throw new HttpError(404, 'Item bulunamadı.');
-    const { kind, url } = z.object({ kind: z.enum(['icon', 'model']), url: z.string().url().max(1000) }).parse(req.body);
-    const exts: readonly string[] = kind === 'icon' ? ICON_EXTENSIONS : MODEL_EXTENSIONS;
-    (async () => {
-      const file = await safeFetch(url, { maxBytes: kind === 'icon' ? MAX_ICON_BYTES : MAX_MODEL_BYTES });
-      const urlExt = path.extname(new URL(file.url).pathname).toLowerCase();
-      const ext = exts.includes(urlExt) ? urlExt : MEDIA_TYPES[file.contentType.split(';')[0].trim().toLowerCase()];
-      if (!ext || !exts.includes(ext)) throw new HttpError(400, `Kaynaktaki dosya türü desteklenmiyor (${urlExt || file.contentType || 'bilinmiyor'}).`);
-      const rel = `${kind === 'icon' ? 'icons' : 'models'}/${crypto.randomUUID()}${ext}`;
-      await fs.promises.writeFile(path.join(uploadDir, rel), file.body);
-      attachMedia(id, kind, rel, path.basename(new URL(file.url).pathname) || `model${ext}`);
-      res.json(getItem(db, id));
-    })().catch(next);
+  /** Kaynak sitedeki ikon veya 3D modeli indirip kayda bağlar. */
+  const remoteMedia = (e: MediaEntity) =>
+    api.post(`/${e.route}/:id/remote-media`, (req, res, next) => {
+      const id = idParam(req);
+      if (!e.getRow(id)) throw new HttpError(404, e.notFound);
+      const { kind, url } = z.object({ kind: z.enum(['icon', 'model']), url: z.string().url().max(2000) }).parse(req.body);
+      const exts: readonly string[] = kind === 'icon' ? ICON_EXTENSIONS : MODEL_EXTENSIONS;
+      (async () => {
+        if (kind === 'model' && isModelSource(url)) {
+          const model = await downloadModel(url, currentCookie());
+          const rel = `models/${crypto.randomUUID()}.glb`;
+          await fs.promises.writeFile(path.join(uploadDir, rel), model.data);
+          attachMedia(e, id, kind, rel, model.filename);
+          res.json({ ...e.getDto(id), importWarnings: model.warnings });
+          return;
+        }
+        const file = await safeFetch(url, { maxBytes: kind === 'icon' ? MAX_ICON_BYTES : MAX_MODEL_BYTES }).catch((error) => {
+          if (kind !== 'icon' || !(error instanceof FetchError) || error.status !== 502) throw error;
+          return protectedIcon(url, currentCookie());
+        });
+        const urlExt = path.extname(new URL(file.url).pathname).toLowerCase();
+        const ext = exts.includes(urlExt) ? urlExt : MEDIA_TYPES[file.contentType.split(';')[0].trim().toLowerCase()];
+        if (!ext || !exts.includes(ext)) throw new HttpError(400, `Kaynaktaki dosya türü desteklenmiyor (${urlExt || file.contentType || 'bilinmiyor'}).`);
+        const rel = `${kind === 'icon' ? 'icons' : 'models'}/${crypto.randomUUID()}${ext}`;
+        await fs.promises.writeFile(path.join(uploadDir, rel), file.body);
+        attachMedia(e, id, kind, rel, path.basename(new URL(file.url).pathname) || `model${ext}`);
+        res.json(e.getDto(id));
+      })().catch(next);
+    });
+  remoteMedia(ITEM_MEDIA);
+  remoteMedia(MONSTER_MEDIA);
+
+  // ---- Canavarlar ----
+  const monsterListSchema = z.object({
+    search: z.string().trim().max(64).optional(),
+    rank: z.string().max(16).optional(),
+    race: z.string().max(16).optional(),
+    levelMin: z.coerce.number().int().min(0).max(250).optional(),
+    levelMax: z.coerce.number().int().min(0).max(250).optional(),
+    hasModel: z.enum(['true', 'false']).optional(),
+    sort: z.string().max(16).optional(),
+    page: z.coerce.number().int().min(1).default(1),
+    pageSize: z.coerce.number().int().min(1).max(200).default(25),
   });
+
+  api.get('/monsters', (req, res) => {
+    const q = monsterListSchema.parse(req.query);
+    res.json(
+      listMonsters(db, {
+        search: q.search || undefined,
+        rank: q.rank || undefined,
+        race: q.race || undefined,
+        levelMin: q.levelMin,
+        levelMax: q.levelMax,
+        hasModel: q.hasModel === undefined ? undefined : q.hasModel === 'true',
+        sort: q.sort,
+        page: q.page,
+        pageSize: q.pageSize,
+      }),
+    );
+  });
+
+  api.get('/monsters/next-vnum', (_req, res) => res.json({ vnum: nextMonsterVnum(db) }));
+
+  api.post('/monsters/import', (req, res, next) => {
+    const body = z
+      .object({ url: z.string().min(1).max(2000), vnum: z.number().int().min(1).max(2_000_000_000).optional() })
+      .parse(req.body);
+    importMonsterFromUrl(db, body.url, { cookieFile: currentCookie(), vnum: body.vnum })
+      .then((draft) => res.json(draft))
+      .catch(next);
+  });
+
+  api.get('/monsters/:id', (req, res) => {
+    const monster = getMonster(db, idParam(req));
+    if (!monster) throw new HttpError(404, 'Canavar bulunamadı.');
+    res.json(monster);
+  });
+
+  api.post('/monsters', (req, res) => {
+    const input = parseMonsterInput(db, req.body);
+    const id = insertMonster(db, input);
+    logActivity(db, 'create', 'monster', id, `Canavar oluşturuldu: ${input.name} (#${input.vnum})`);
+    res.status(201).json(getMonster(db, id));
+  });
+
+  api.put('/monsters/:id', (req, res) => {
+    const id = idParam(req);
+    if (!getMonsterRow(db, id)) throw new HttpError(404, 'Canavar bulunamadı.');
+    const input = parseMonsterInput(db, req.body, id);
+    updateMonster(db, id, input);
+    logActivity(db, 'update', 'monster', id, `Canavar güncellendi: ${input.name} (#${input.vnum})`);
+    res.json(getMonster(db, id));
+  });
+
+  api.post('/monsters/:id/clone', (req, res) => {
+    const source = getMonster(db, idParam(req));
+    if (!source) throw new HttpError(404, 'Canavar bulunamadı.');
+    const vnum = nextMonsterVnum(db);
+    const input = {
+      ...monsterToInput(source),
+      vnum,
+      code: uniqueMonsterCode(db, `${source.code}_kopya`.slice(0, 40), vnum),
+      name: `${source.name} (kopya)`.slice(0, 64),
+    };
+    const id = insertMonster(db, input);
+    logActivity(db, 'create', 'monster', id, `Canavar kopyalandı: ${source.name} → #${vnum}`);
+    res.status(201).json(getMonster(db, id));
+  });
+
+  api.delete('/monsters/:id', (req, res) => {
+    const id = idParam(req);
+    const row = getMonsterRow(db, id);
+    if (!row) throw new HttpError(404, 'Canavar bulunamadı.');
+    db.prepare('DELETE FROM monsters WHERE id = ?').run(id);
+    removeUpload(row.icon_path);
+    removeUpload(row.model_path);
+    logActivity(db, 'delete', 'monster', id, `Canavar silindi: ${row.name} (#${row.vnum})`);
+    res.status(204).end();
+  });
+
+  // ---- Droplar ----
+  api.use(dropsRouter(db));
 
   // ---- Dışa / içe aktarma ----
   const allItems = () =>

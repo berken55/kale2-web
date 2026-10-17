@@ -1,12 +1,10 @@
 /**
  * metin2alerts.com item sayfası okuyucusu.
  *
- * ÖNEMLİ: Bu modül, sitenin gerçek HTML'i görülmeden yazıldı. Yalnızca bilinen
- * adres yapısına (/en/wiki/item/{vnum}-{isim}) ve sayfalarda geçtiği bilinen
- * metinlere ("From Level", "Attack Value", yükseltme tablosu) dayanır. Site
- * erişilebilir olduğunda gerçek sayfalarla doğrulanmalı ve gerekirse
- * düzeltilmelidir. Okunamayan alanlar taslakta boş kalır ve yönetici tarafından
- * düzenleyicide tamamlanır.
+ * İngilizce eşya sayfalarını ve satır/sütun biçimindeki yükseltme tablolarını
+ * okur. Güncel sütun düzeni gerçek Sword sayfasıyla doğrulandı. Okunamayan
+ * alanlar taslakta belirtilir; sunucuya özel değerler yönetici tarafından
+ * kontrol edilmelidir.
  */
 import { attr, firstTagText, htmlToText, images, links, metaContent, parseInteger, tables, type Table } from './html.ts';
 import type { RawItem, RawLevel, RawMaterial, SiteImporter } from './types.ts';
@@ -55,7 +53,8 @@ const CLASS_WORDS: Array<[RegExp, string]> = [
 
 function parseClasses(text: string): string[] | null {
   const lines = text.split('\n');
-  for (const line of lines) {
+  for (const [index, original] of lines.entries()) {
+    const line = /^\[?(wearable|usable|wieldable)\]?$/i.test(original) ? `${original} ${lines[index + 1] ?? ''}` : original;
     if (!/(usable|wieldable|wearable|equippable|class|kullan)/i.test(line)) continue;
     const found = CLASS_WORDS.filter(([re]) => re.test(line)).map(([, c]) => c);
     if (!found.length) continue;
@@ -117,6 +116,28 @@ function parseMaterials(rowHtml: string, base: string): RawMaterial[] {
 }
 
 function parseUpgradeTable(t: Table, base: string): RawLevel[] | null {
+  // Current site uses one column per upgrade level.
+  if (t.headers.slice(1).length >= 2 && t.headers.slice(1).every((h) => /^\+\s*\d+$/.test(h))) {
+    return t.headers.slice(1).map((h, index) => {
+      const level: RawLevel = { level: Number(h.replace(/\D/g, '')), materials: [] };
+      for (const row of t.rows) {
+        const col = headerColumn(row.cells[0] ?? '');
+        const cell = row.cells[index + 1] ?? '';
+        const rg = range(cell);
+        if (col === 'attack' && rg) [level.minAttack, level.maxAttack] = rg;
+        if (col === 'magic' && rg) [level.minMagicAttack, level.maxMagicAttack] = rg;
+        if (col === 'defense') level.defense = parseInteger(cell) ?? undefined;
+        if (col === 'cost') level.cost = parseInteger(cell) ?? undefined;
+        // The first chance row is the standard blessing-scroll route.
+        if (col === 'chance' && level.successRate === undefined) level.successRate = parseInteger(cell) ?? (level.level === 0 ? 100 : undefined);
+        if (col === 'materials') {
+          const cells = [...row.html.matchAll(/<td\b[^>]*>([\s\S]*?)<\/td>/gi)];
+          level.materials = parseMaterials(cells[index + 1]?.[1] ?? '', base);
+        }
+      }
+      return level;
+    });
+  }
   const levelRows = t.rows.filter((r) => r.cells.length >= 2 && rowLevel(r.cells[0]) !== null);
   if (levelRows.length < 2) return null;
 
@@ -255,6 +276,7 @@ export const metin2alerts: SiteImporter = {
       iconUrl,
       modelUrl,
       categoryText: `${categoryHints(html, url)} ${new URL(url).pathname}`,
+      warnings: /upg-mats-toggle/.test(html) && !levels.some((l) => l.materials.length) ? ['Yükseltme malzemeleri sayfada kapalı veya boş geldi; malzeme listesini kaynaktan kontrol edin.'] : [],
       found,
     };
   },

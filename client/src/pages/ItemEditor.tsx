@@ -154,7 +154,8 @@ export function ItemEditorPage() {
     for (const [kind, url, enabled] of jobs) {
       if (!url || !enabled) continue;
       try {
-        current = await api.post<Item>(`/api/items/${target.id}/remote-media`, { kind, url });
+        current = await api.post<Item & { importWarnings?: string[] }>(`/api/items/${target.id}/remote-media`, { kind, url });
+        for (const warning of (current as Item & { importWarnings?: string[] }).importWarnings ?? []) toast('error', warning);
         toast('success', kind === 'icon' ? 'İkon kaynaktan indirildi.' : '3D model kaynaktan indirildi.');
       } catch (e) {
         toast('error', `${kind === 'icon' ? 'İkon' : '3D model'} indirilemedi: ${(e as Error).message}`);
@@ -204,7 +205,7 @@ export function ItemEditorPage() {
       setForm(f);
       setSaved(JSON.stringify(f));
       toast('success', isNew ? 'Item oluşturuldu.' : 'Değişiklikler kaydedildi.');
-      if (isNew) navigate(`/items/${result.id}`, { replace: true });
+      if (isNew) navigate(`/admin/items/${result.id}`, { replace: true });
     } catch (e) {
       if (e instanceof ApiError) {
         const map: Record<string, string> = {};
@@ -245,7 +246,7 @@ export function ItemEditorPage() {
       await api.del(`/api/items/${item.id}`);
       setSaved(JSON.stringify(form));
       toast('success', 'Item silindi.');
-      navigate('/items');
+      navigate('/admin/items');
     } catch (e) {
       toast('error', (e as Error).message);
     }
@@ -257,7 +258,7 @@ export function ItemEditorPage() {
         title="Item yüklenemedi"
         text={loadError}
         action={
-          <Link to="/items" className="btn-ghost">
+          <Link to="/admin/items" className="btn-ghost">
             Listeye dön
           </Link>
         }
@@ -280,7 +281,7 @@ export function ItemEditorPage() {
         subtitle={isNew ? 'Yeni bir item tanımlayın' : `Vnum #${item?.vnum}`}
         actions={
           <>
-            <Link to="/items" className="btn-ghost">
+            <Link to="/admin/items" className="btn-ghost">
               ← Liste
             </Link>
             {!isNew && item && (
@@ -676,7 +677,7 @@ function BonusesTab({
           <button className="btn-ghost" disabled={!adding} onClick={add}>
             + Ekle
           </button>
-          <Link to="/bonuses" className="self-center text-sm text-gold-400 hover:text-gold-300">
+          <Link to="/admin/bonuses" className="self-center text-sm text-gold-400 hover:text-gold-300">
             Bonus tanımlarını yönet
           </Link>
         </div>
@@ -903,7 +904,7 @@ function MaterialsEditor({ value, onChange }: { value: ItemUpgrade['materials'];
 }
 
 // ------------------------------------------------------------------
-function UploadZone({
+export function UploadZone({
   accept,
   maxBytes,
   label,
@@ -971,7 +972,16 @@ function UploadZone({
   );
 }
 
-function MediaTab({ item, onChange }: { item: Item; onChange: (i: Item) => void }) {
+/** İkon ve 3D modeli olan kayıt (item ya da canavar) */
+export interface MediaOwner {
+  id: number;
+  name: string;
+  iconUrl: string | null;
+  modelUrl: string | null;
+  modelFileName: string | null;
+}
+
+export function MediaTab<T extends MediaOwner>({ item, onChange, base = '/api/items' }: { item: T; onChange: (i: T) => void; base?: string }) {
   const toast = useToast();
   const confirm = useConfirm();
   const [busy, setBusy] = useState<'icon' | 'model' | null>(null);
@@ -986,7 +996,7 @@ function MediaTab({ item, onChange }: { item: Item; onChange: (i: Item) => void 
     setBusy(kind);
     setProgress(0);
     try {
-      const updated = await uploadFile<Item>(`/api/items/${item.id}/${kind}`, file, setProgress);
+      const updated = await uploadFile<T>(`${base}/${item.id}/${kind}`, file, setProgress);
       onChange(updated);
       toast('success', kind === 'icon' ? 'İkon yüklendi.' : '3D model yüklendi.');
     } catch (e) {
@@ -1000,7 +1010,7 @@ function MediaTab({ item, onChange }: { item: Item; onChange: (i: Item) => void 
     if (!(await confirm({ title: kind === 'icon' ? 'İkon kaldırılsın mı?' : '3D model kaldırılsın mı?', message: 'Dosya sunucudan silinecek.', confirmText: 'Kaldır', danger: true })))
       return;
     try {
-      onChange(await api.del<Item>(`/api/items/${item.id}/${kind}`));
+      onChange(await api.del<T>(`${base}/${item.id}/${kind}`));
       toast('success', 'Dosya kaldırıldı.');
     } catch (e) {
       toast('error', (e as Error).message);

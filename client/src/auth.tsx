@@ -16,7 +16,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     // Herkese açık wiki sayfalarında oturum kontrolüne gerek yok
-    if (window.location.pathname.startsWith('/wiki')) {
+    if (!window.location.pathname.startsWith('/admin')) {
       setLoading(false);
       return;
     }

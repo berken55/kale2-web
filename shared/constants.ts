@@ -58,6 +58,82 @@ export const ITEM_SUBTYPES: Record<ItemType, readonly Option[]> = {
   ETC: [{ value: 'NONE', label: 'Genel' }],
 };
 
+// ---- Canavarlar ----
+export const MONSTER_RANKS = [
+  { value: 'NORMAL', label: 'Normal' },
+  { value: 'ELITE', label: 'Seçkin' },
+  { value: 'BOSS', label: 'Boss' },
+  { value: 'KING', label: 'Kral' },
+  { value: 'STONE', label: 'Metin Taşı' },
+  { value: 'NPC', label: 'NPC' },
+] as const satisfies readonly Option[];
+
+export type MonsterRank = (typeof MONSTER_RANKS)[number]['value'];
+
+export const MONSTER_RACES = [
+  { value: '', label: 'Belirsiz' },
+  { value: 'ANIMAL', label: 'Hayvan' },
+  { value: 'HUMAN', label: 'Yarı İnsan' },
+  { value: 'ORC', label: 'Ork' },
+  { value: 'MYSTIC', label: 'Mistik' },
+  { value: 'UNDEAD', label: 'Ölümsüz' },
+  { value: 'DEVIL', label: 'Şeytan' },
+  { value: 'INSECT', label: 'Böcek' },
+  { value: 'DESERT', label: 'Çöl' },
+] as const satisfies readonly Option[];
+
+export type MonsterRace = (typeof MONSTER_RACES)[number]['value'];
+
+export const MONSTER_ELEMENTS = [
+  { value: '', label: 'Yok' },
+  { value: 'FIRE', label: 'Ateş' },
+  { value: 'ICE', label: 'Buz' },
+  { value: 'WIND', label: 'Rüzgar' },
+  { value: 'ELEC', label: 'Şimşek' },
+  { value: 'EARTH', label: 'Toprak' },
+  { value: 'DARK', label: 'Karanlık' },
+] as const satisfies readonly Option[];
+
+export type MonsterElement = (typeof MONSTER_ELEMENTS)[number]['value'];
+
+/** Canavarın silah ve elementlere karşı savunması (% olarak; eksi değer = zayıf). */
+export const MONSTER_RESISTS = [
+  { value: 'SWORD', label: 'Kılıç' },
+  { value: 'TWOHAND', label: 'Çift El' },
+  { value: 'DAGGER', label: 'Hançer' },
+  { value: 'BOW', label: 'Ok' },
+  { value: 'BELL', label: 'Çan' },
+  { value: 'FAN', label: 'Yelpaze' },
+  { value: 'CLAW', label: 'Pençe' },
+  { value: 'FIST', label: 'Yumruk' },
+  { value: 'MAGIC', label: 'Büyü' },
+  { value: 'FIRE', label: 'Ateş' },
+  { value: 'ICE', label: 'Buz' },
+  { value: 'WIND', label: 'Rüzgar' },
+  { value: 'ELEC', label: 'Şimşek' },
+  { value: 'EARTH', label: 'Toprak' },
+  { value: 'DARK', label: 'Karanlık' },
+  { value: 'POISON', label: 'Zehir' },
+] as const satisfies readonly Option[];
+
+/** Canavarın vuruşlarında tetiklenme şansı (%). */
+export const MONSTER_ABILITIES = [
+  { value: 'CRITICAL', label: 'Kritik vuruş' },
+  { value: 'PENETRATE', label: 'Delici vuruş' },
+  { value: 'STUN', label: 'Bayıltma' },
+  { value: 'SLOW', label: 'Yavaşlatma' },
+  { value: 'POISON', label: 'Zehirleme' },
+  { value: 'CURSE', label: 'Lanetleme' },
+] as const satisfies readonly Option[];
+
+export const MONSTER_FLAGS = [
+  { value: 'SUMMONER', label: 'Yardımcı çağırır' },
+  { value: 'NO_KNOCKBACK', label: 'Geri itilmez' },
+  { value: 'NO_MOVE', label: 'Hareket etmez' },
+  { value: 'REVIVE', label: 'Dirilir' },
+  { value: 'ANNOUNCE', label: 'Doğunca duyurulur' },
+] as const satisfies readonly Option[];
+
 export const CLASSES = [
   { value: 'WARRIOR', label: 'Savaşçı' },
   { value: 'NINJA', label: 'Ninja' },

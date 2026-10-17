@@ -1,0 +1,22 @@
+[Unit]
+Description=Kale Savaslari website and admin panel
+After=network.target
+
+[Service]
+Type=simple
+User=kaleweb
+Group=kaleweb
+WorkingDirectory=/opt/kale-savaslari/current
+EnvironmentFile=/opt/kale-savaslari/shared/app.env
+ExecStart=/usr/bin/node --import tsx server/index.ts
+Restart=always
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/kale-savaslari/shared
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

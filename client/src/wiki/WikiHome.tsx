@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import type { WikiCatalog } from '@shared/types';
 import { api } from '../api';
 import { Spinner } from '../components/ui';
-import { CATEGORY_GROUPS, CategoryIcon } from './common';
+import { CATEGORY_GROUPS, CategoryIcon, MONSTER_LINKS } from './common';
 
 export function WikiHome() {
   const [catalog, setCatalog] = useState<WikiCatalog | null>(null);
@@ -26,6 +26,16 @@ export function WikiHome() {
           {catalog.total.toLocaleString('tr-TR')} item · silah, zırh ve takıların +0 … +9 değerleri, yükseltme şansları ve malzemeleri
         </p>
       </div>
+      <section className="mb-8">
+        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-slate-400">Canavarlar</h2>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">
+          {MONSTER_LINKS.map((l) => (
+            <Link key={l.path} to={l.path} className="card p-4 font-medium text-slate-100 transition hover:border-gold-500/40 hover:bg-ink-850">
+              {l.label}
+            </Link>
+          ))}
+        </div>
+      </section>
       {CATEGORY_GROUPS.map((g) => {
         const cats = g.label === 'Diğer' ? g.categories.filter((c) => count(c.type, c.subtype) > 0) : g.categories;
         if (!cats.length) return null;

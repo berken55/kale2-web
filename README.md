@@ -1,6 +1,8 @@
-# Kale2 Yönetim Paneli
+# METİN3 Website ve Kale2 Yönetim Paneli
 
-Metin2 tarzı bir MMORPG için item yönetim paneli. Panelden şunları yapabilirsiniz:
+METİN3 tanıtım sitesi ile Metin2 tarzı MMORPG item yönetim panelini aynı uygulamada barındırır. Ana adres oyunculara açık websiteyi, `/admin` yönetim panelini ve `/wiki` item veritabanını sunar.
+
+Panelden şunları yapabilirsiniz:
 
 - **Item tanımlama:** Silah (kılıç, çift el, hançer, yay, çan, yelpaze, pençe), zırh ve ekipman (zırh, kask, kalkan, bilezik, ayakkabı, kolye, küpe), kostüm, kemer, kullanılabilir item ve malzeme tanımlanabilir. Her item için vnum, nadirlik, gereken seviye, sınıf ve cinsiyet kısıtı, fiyatlar, ticaret izni ve açıklama girilebilir.
 - **Güç değerleri:** Fiziksel ve büyülü saldırı aralıkları, saldırı hızı ve savunma.
@@ -62,10 +64,12 @@ cp .env.example .env   # ADMIN_PASSWORD ve SESSION_SECRET değerlerini değişti
 npm run dev
 ```
 
-- Panel: http://localhost:5173
+- Website: http://localhost:5173
+- Yönetim paneli: http://localhost:5173/admin
+- Item Wiki: http://localhost:5173/wiki
 - API: http://localhost:3001
 
-Geliştirme ortamında `.env` dosyası yoksa giriş bilgileri `admin` / `admin` olur.
+Geliştirme ortamında `.env` dosyası yoksa giriş bilgileri `admin` / `d2fda.admin` olur.
 
 ### Production
 
@@ -98,6 +102,10 @@ tests/    API testleri
 Item tipleri, alt tipler, sınıflar ve nadirlik seviyeleri `shared/constants.ts` dosyasında tanımlıdır. Oyununuza özel bir tip eklemek için bu dosyayı düzenlemeniz yeterlidir.
 
 ## 3D modeller hakkında
+
+Admin panelindeki **Linkten içe aktar** alanı Metin2Alerts eşya/canavar/NPC ve
+m2icondb eşya/canavar/3D bağlantılarını destekler. Model indirme servisi kurulumu,
+çerez yükleme ve destek sınırları için [servis belgelerine](services/model-downloader/README.md) bakın.
 
 - **GLB** önerilen formattır: doku ve malzemeler tek dosyada gelir.
 - **GLTF** dosyaları yalnızca dokular dosyanın içine gömülüyse doğru görünür.

@@ -1,11 +1,16 @@
 import { ITEM_SUBTYPES, MAX_UPGRADE_LEVEL, type ItemType } from '../../shared/constants.ts';
-import type { ImportDraft, ItemUpgrade } from '../../shared/types.ts';
+import type { ImportDraft, ItemUpgrade, MonsterImportDraft } from '../../shared/types.ts';
+import { convertLegacyMonster } from '../monster-convert.ts';
+import { uniqueMonsterCode } from '../monsters.ts';
 import type { DB } from '../db.ts';
 import { FetchError, isAllowedUrl, safeFetch } from './fetch.ts';
 import { metin2alerts } from './metin2alerts.ts';
+import { m2icondb } from './m2icondb.ts';
+import { monsters } from './monsters.ts';
+import { protectedPage, runWorker } from './model-service.ts';
 import type { RawItem, SiteImporter } from './types.ts';
 
-export const IMPORTERS: SiteImporter[] = [metin2alerts];
+export const IMPORTERS: SiteImporter[] = [metin2alerts, m2icondb, monsters];
 
 export function findImporter(url: string) {
   try {
@@ -114,7 +119,7 @@ const FIELD_LABELS: Record<string, string> = {
 };
 
 export function buildDraft(db: DB, raw: RawItem, url: string, importer: SiteImporter, typeOverride?: { type: string; subtype: string }): ImportDraft {
-  const warnings: string[] = [];
+  const warnings: string[] = [...(raw.warnings ?? [])];
   if (!raw.vnum) throw new FetchError('Sayfadan vnum okunamadı. Item sayfasının linkini verdiğinizden emin olun.');
 
   const guessed = typeOverride ?? (raw.type && raw.subtype ? { type: raw.type, subtype: raw.subtype } : guessType(raw.name ?? '', raw.categoryText));
@@ -213,8 +218,10 @@ export function buildDraft(db: DB, raw: RawItem, url: string, importer: SiteImpo
   };
 }
 
-/** Linki doğrular, sayfayı indirir ve düzenlenebilir bir taslak döndürür. Hiçbir şey kaydedilmez. */
-export async function importFromUrl(db: DB, rawUrl: string, typeOverride?: { type: string; subtype: string }): Promise<ImportDraft> {
+type ImportOptions = { cookieFile?: string; vnum?: number };
+
+/** Linki doğrular, sayfayı indirir ve sitenin ham verisini döndürür. */
+async function fetchRaw(rawUrl: string, options: ImportOptions): Promise<{ url: string; importer: SiteImporter; raw: RawItem }> {
   let url: string;
   try {
     url = new URL(rawUrl.trim()).toString();
@@ -225,8 +232,101 @@ export async function importFromUrl(db: DB, rawUrl: string, typeOverride?: { typ
   if (!importer) {
     throw new FetchError(`Bu link desteklenmiyor. Desteklenen biçim: ${IMPORTERS.map((i) => i.example).join(', ')}`);
   }
-  const page = await safeFetch(url, { maxBytes: 3 * 1024 * 1024, accept: 'text/html' });
-  if (!/html/i.test(page.contentType)) throw new FetchError('Kaynak bir HTML sayfası döndürmedi.', 502);
-  const raw = importer.parse(page.body.toString('utf8'), page.url);
-  return buildDraft(db, raw, url, importer, typeOverride);
+  let raw: RawItem;
+  if (isMonsterPage(importer, url)) {
+    const record = await runWorker<{ viewerUrl: string; displayName: string; category: string; vnums: Array<{ vnum: number }>; stats: Record<string, unknown> }>({ action: 'monster', url });
+    const s = record.stats;
+    const extra: Record<string, string | number> = {};
+    for (const [key, value] of Object.entries(s)) {
+      if (typeof value === 'number' || typeof value === 'string') extra[key] = value;
+      else if (Array.isArray(value)) extra[key] = value.join(', ').slice(0, 200);
+      else if (value && typeof value === 'object') extra[key] = JSON.stringify(value).slice(0, 200);
+    }
+    if (typeof s.movSpeed === 'number') extra.movementSpeed = s.movSpeed;
+    if (typeof s.atkSpeed === 'number') extra.attackSpeed = s.atkSpeed;
+    raw = { vnum: options.vnum ?? record.vnums[0]?.vnum, name: record.displayName, type: 'MONSTER', subtype: /boss/i.test(record.category) ? 'BOSS' : /npc/i.test(record.category) ? 'NPC' : 'MOB',
+      levelRequired: Number(s.level ?? 0), stats: { minAttack: Number(s.dmgMin ?? 0), maxAttack: Number(s.dmgMax ?? 0), defense: Number(s.def ?? 0) },
+      bonuses: [], levels: [], monsterStats: extra, modelUrl: record.viewerUrl, found: ['vnum', 'name', 'stats', 'levelRequired'] };
+  } else if (importer === m2icondb) {
+    raw = m2icondb.parse('', url);
+    raw.vnum = options.vnum ?? raw.vnum;
+    if (raw.vnum) {
+      const metadataUrl = `https://metin2alerts.com/en/wiki/${raw.type === 'MONSTER' ? 'mob' : 'item'}/${raw.vnum}`;
+      try {
+        const html = await protectedPage(metadataUrl, options.cookieFile);
+        const metadata = (raw.type === 'MONSTER' ? monsters : metin2alerts).parse(html, metadataUrl);
+        raw = { ...metadata, modelUrl: url };
+      } catch {
+        raw.found = raw.found.filter((f) => f !== 'stats');
+      }
+    }
+  } else {
+    let html: string;
+    try {
+      const page = await safeFetch(url, { maxBytes: 3 * 1024 * 1024, accept: 'text/html' });
+      if (!/html/i.test(page.contentType)) throw new FetchError('Kaynak bir HTML sayfası döndürmedi.', 502);
+      html = page.body.toString('utf8');
+    } catch (error) {
+      if (!(error instanceof FetchError) || error.status !== 502) throw error;
+      html = await protectedPage(url, options.cookieFile);
+    }
+    raw = importer.parse(html, url);
+    if (!raw.name || !raw.found.includes('name')) throw new FetchError('Sayfa verileri okunamadı. Güncel cookies.txt yükleyip yeniden deneyin.', 502);
+  }
+  raw.vnum = options.vnum ?? raw.vnum;
+  if (!raw.vnum) throw new FetchError('Bu 3D bağlantısında Vnum yok. Vnum alanını doldurup yeniden getirin.');
+  if (importer === metin2alerts && !raw.modelUrl && guessType(raw.name ?? '', raw.categoryText)?.type === 'WEAPON') {
+    raw.modelUrl = `https://m2icondb.com/item/${raw.vnum}`;
+  }
+  return { url, importer, raw };
+}
+
+const isMonsterPage = (importer: SiteImporter, url: string) => importer === m2icondb && new URL(url).pathname.startsWith('/monster/');
+
+const sourceWarning = (importer: SiteImporter, url: string, raw: RawItem) =>
+  isMonsterPage(importer, url)
+    ? 'Katalogdaki ilk Vnum kullanıldı. Aynı model birden fazla canavarda kullanılabilir; Vnum ve özellikleri kontrol edin.'
+    : importer === m2icondb || raw.modelUrl?.includes('m2icondb.com')
+      ? 'Model m2icondb kaynağından alınır. Okunabilen özellikler aynı Vnum için Metin2Alerts verileriyle tamamlanır; sunucunuzun değerleriyle karşılaştırın.'
+      : null;
+
+/** Item sayfasının linkinden düzenlenebilir bir item taslağı döndürür. Hiçbir şey kaydedilmez. */
+export async function importFromUrl(db: DB, rawUrl: string, typeOverride?: { type: string; subtype: string }, options: ImportOptions = {}): Promise<ImportDraft> {
+  const { url, importer, raw } = await fetchRaw(rawUrl, options);
+  if (raw.type === 'MONSTER') throw new FetchError('Bu bir canavar sayfası. Canavarlar sayfasındaki "Linkten içe aktar" ile ekleyin.');
+  const draft = buildDraft(db, raw, url, importer, typeOverride);
+  const warning = sourceWarning(importer, url, raw);
+  if (warning) draft.warnings.push(warning);
+  return draft;
+}
+
+/** Canavar sayfasının linkinden düzenlenebilir bir canavar taslağı döndürür. Hiçbir şey kaydedilmez. */
+export async function importMonsterFromUrl(db: DB, rawUrl: string, options: ImportOptions = {}): Promise<MonsterImportDraft> {
+  const { url, importer, raw } = await fetchRaw(rawUrl, options);
+  if (raw.type !== 'MONSTER') throw new FetchError('Bu bir canavar sayfası değil. Itemler sayfasından içe aktarın.');
+  const existing = db.prepare('SELECT id, code FROM monsters WHERE vnum = ?').get(raw.vnum) as { id: number; code: string } | undefined;
+  const monster = convertLegacyMonster({
+    vnum: raw.vnum!,
+    name: raw.name || `Canavar ${raw.vnum}`,
+    subtype: raw.subtype ?? 'MOB',
+    level: raw.levelRequired ?? 1,
+    damageMin: raw.stats.minAttack ?? 0,
+    damageMax: raw.stats.maxAttack ?? 0,
+    defense: raw.stats.defense ?? 0,
+    stats: raw.monsterStats ?? {},
+    sourceUrl: url,
+  });
+  monster.code = existing?.code ?? uniqueMonsterCode(db, monster.code, monster.vnum);
+  const warnings = [...(raw.warnings ?? [])];
+  if (!raw.monsterStats?.hp) warnings.push('Sayfadan HP okunamadı; kaydetmeden önce girin.');
+  const warning = sourceWarning(importer, url, raw);
+  if (warning) warnings.push(warning);
+  const safeAsset = (u?: string | null) => (u && isAllowedUrl(u) ? u : null);
+  return {
+    source: { url, importer: importer.id, importerName: importer.name },
+    monster,
+    assets: { iconUrl: safeAsset(raw.iconUrl), modelUrl: safeAsset(raw.modelUrl) },
+    existingMonsterId: existing?.id ?? null,
+    warnings,
+  };
 }
