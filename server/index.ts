@@ -35,6 +35,7 @@ const app = createApp({
   importPrivateDir: path.join(dataDir, 'import-private'),
   auth: { username, password, secret, secureCookie: process.env.COOKIE_SECURE === 'true' },
   publicWiki: process.env.PUBLIC_WIKI !== 'false',
+  gameToken: process.env.GAME_API_TOKEN || undefined,
   clientDir: isProd ? path.join(root, 'dist/client') : undefined,
 });
 

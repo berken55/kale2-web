@@ -13,6 +13,8 @@ if [ ! -f "$base/shared/app.env" ]; then
         printf 'DATA_DIR=%s/shared/data\nUPLOAD_DIR=%s/shared/uploads\nPUBLIC_WIKI=true\n' "$base" "$base"
     } > "$base/shared/app.env"
 fi
+# Oyun API anahtarı yoksa ekle (yeni ve eski kurulumlar; oyun sunucusu aynı değeri KALE2_GAME_TOKEN olarak kullanır)
+grep -q '^GAME_API_TOKEN=' "$base/shared/app.env" || printf 'GAME_API_TOKEN=%s\n' "$(openssl rand -hex 32)" >> "$base/shared/app.env"
 chown -R kaleweb:kaleweb "$base/shared"
 chmod 600 "$base/shared/app.env"
 ln -sfn "$release" "$base/current"

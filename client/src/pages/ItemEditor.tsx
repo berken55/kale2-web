@@ -26,6 +26,7 @@ const EMPTY_STATS: ItemStats = { minAttack: 0, maxAttack: 0, minMagicAttack: 0, 
 
 const emptyForm = (vnum: number): Form => ({
   vnum,
+  code: null,
   name: '',
   type: 'WEAPON',
   subtype: 'SWORD',
@@ -435,6 +436,9 @@ function GeneralTab({ form, update, errors }: { form: Form; update: Update; erro
       </Field>
       <Field label="Vnum" hint="Oyundaki benzersiz item numarası" error={errors.vnum}>
         <NumberInput value={form.vnum} min={1} onChange={(v) => update('vnum', v)} />
+      </Field>
+      <Field label="Oyun kodu" hint="Oyundaki item kodu (ör. RUSTY_SWORD). Boşsa bu item oyunda düşmez." error={errors.code}>
+        <input className="input font-mono" value={form.code ?? ''} maxLength={40} onChange={(e) => update('code', e.target.value.toUpperCase() || null)} />
       </Field>
       <Field label="Nadirlik">
         <select className="input" value={form.rarity} onChange={(e) => update('rarity', e.target.value as Form['rarity'])}>

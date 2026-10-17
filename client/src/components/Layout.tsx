@@ -9,6 +9,7 @@ const NAV = [
   { to: '/admin/drop-groups', label: 'Drop Grupları', end: false, icon: 'M4 7l8-4 8 4-8 4zM4 12l8 4 8-4M4 17l8 4 8-4' },
   { to: '/admin/level-drops', label: 'Genel Drop', end: false, icon: 'M12 3v14m0 0l-5-5m5 5l5-5M5 21h14' },
   { to: '/admin/bonuses', label: 'Bonus Tanımları', end: false, icon: 'M12 3l2.6 5.6L21 9.3l-4.5 4.4 1 6.3L12 17l-5.5 3 1-6.3L3 9.3l6.4-.7z' },
+  { to: '/admin/releases', label: 'Yayınla', end: false, icon: 'M12 3l4 4h-3v7h-2V7H8zM4 15v5h16v-5' },
   { to: '/admin/data', label: 'İçe / Dışa Aktar', end: false, icon: 'M12 3v12m0 0l-4-4m4 4l4-4M4 17v3h16v-3' },
 ];
 

@@ -5,6 +5,7 @@ import type { ItemInput } from './validation.ts';
 interface ItemRow {
   id: number;
   vnum: number;
+  code: string | null;
   name: string;
   type: string;
   subtype: string;
@@ -72,6 +73,7 @@ export function getItem(db: DB, id: number): Item | null {
   }>;
   return {
     ...rowToSummary(row),
+    code: row.code,
     gender: row.gender as Item['gender'],
     buyPrice: row.buy_price,
     sellPrice: row.sell_price,
@@ -128,8 +130,8 @@ export function listItems(db: DB, q: ListQuery) {
   const where: string[] = [];
   const params: unknown[] = [];
   if (q.search) {
-    where.push('(name LIKE ? OR CAST(vnum AS TEXT) LIKE ?)');
-    params.push(`%${q.search}%`, `${q.search}%`);
+    where.push('(name LIKE ? OR CAST(vnum AS TEXT) LIKE ? OR code LIKE ?)');
+    params.push(`%${q.search}%`, `${q.search}%`, `${q.search.toUpperCase()}%`);
   }
   if (q.type) {
     where.push('type = ?');
@@ -208,6 +210,7 @@ function writeChildren(db: DB, itemId: number, input: ItemInput) {
 function scalarParams(input: ItemInput) {
   return {
     vnum: input.vnum,
+    code: input.code ?? null,
     name: input.name,
     type: input.type,
     subtype: input.subtype,
@@ -257,6 +260,12 @@ export function vnumTaken(db: DB, vnum: number, exceptId?: number) {
   return !!row && row.id !== exceptId;
 }
 
+export function itemCodeTaken(db: DB, code: string | null, exceptId?: number) {
+  if (!code) return false;
+  const row = db.prepare('SELECT id FROM items WHERE code = ?').get(code) as { id: number } | undefined;
+  return !!row && row.id !== exceptId;
+}
+
 export function nextVnum(db: DB) {
   const { max } = db.prepare('SELECT MAX(vnum) AS max FROM items').get() as { max: number | null };
   // Metin2 geleneği: yükseltme seviyeleri için 10'luk bloklar
@@ -266,6 +275,7 @@ export function nextVnum(db: DB) {
 export function itemToInput(item: Item): ItemInput {
   return {
     vnum: item.vnum,
+    code: item.code,
     name: item.name,
     type: item.type,
     subtype: item.subtype,

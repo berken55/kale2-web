@@ -41,6 +41,8 @@ export interface ItemStats {
 export interface Item {
   id: number;
   vnum: number;
+  /** Oyundaki item kodu (ör. RUSTY_SWORD); droplar oyunda bu kodla eşlenir */
+  code: string | null;
   name: string;
   type: ItemType;
   subtype: string;

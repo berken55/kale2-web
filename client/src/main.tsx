@@ -9,6 +9,7 @@ import { DashboardPage } from './pages/Dashboard';
 import { DataPage } from './pages/Data';
 import { DropGroupEditorPage, DropGroupListPage } from './pages/DropGroups';
 import { LevelDropsPage } from './pages/LevelDrops';
+import { ReleasesPage } from './pages/Releases';
 import { ItemEditorPage } from './pages/ItemEditor';
 import { ItemListPage } from './pages/ItemList';
 import { LoginPage } from './pages/Login';
@@ -46,6 +47,7 @@ function AdminApp() {
         <Route path="drop-groups/new" element={<DropGroupEditorPage />} />
         <Route path="drop-groups/:id" element={<DropGroupEditorPage />} />
         <Route path="level-drops" element={<LevelDropsPage />} />
+        <Route path="releases" element={<ReleasesPage />} />
         <Route path="bonuses" element={<BonusTypesPage />} />
         <Route path="data" element={<DataPage />} />
         <Route path="*" element={<Navigate to="/admin" replace />} />

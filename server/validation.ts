@@ -23,6 +23,14 @@ const int = (min = 0, max = 2_000_000_000) => z.coerce.number().int().min(min).m
 export const itemInputSchema = z
   .object({
     vnum: int(1),
+    code: z
+      .string()
+      .trim()
+      .max(40)
+      .regex(/^[A-Z0-9_]*$/, 'Oyun kodu yalnızca büyük harf, rakam ve alt çizgi içerebilir.')
+      .nullable()
+      .default(null)
+      .transform((v) => v || null),
     name: z.string().trim().min(1, 'İsim zorunludur.').max(64),
     type: z.enum(values(ITEM_TYPES)),
     subtype: z.string().min(1),

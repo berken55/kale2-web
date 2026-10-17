@@ -17,12 +17,14 @@ import { authRouter, requireAuth, type AuthConfig } from './auth.ts';
 import { logActivity, type DB } from './db.ts';
 import { dropsRouter, dropUsageOfItem } from './drops.ts';
 import { HttpError } from './http-error.ts';
+import { gameRouter, releasesRouter } from './releases.ts';
 import {
   createItem,
   findBonusLimitViolation,
   findMissingBonusTypes,
   getItem,
   getItemRow,
+  itemCodeTaken,
   itemToInput,
   listItems,
   nextVnum,
@@ -62,6 +64,8 @@ export interface AppOptions {
   /** Giriş gerektirmeyen item wiki'si (varsayılan: açık) */
   publicWiki?: boolean;
   importPrivateDir?: string;
+  /** Oyun sunucusunun /api/game uç noktaları için anahtar (GAME_API_TOKEN); yoksa kapalı */
+  gameToken?: string;
 }
 
 
@@ -79,6 +83,7 @@ function parseItemInput(db: DB, body: unknown, exceptId?: number): ItemInput {
   }
   const input = parsed.data;
   if (vnumTaken(db, input.vnum, exceptId)) throw new HttpError(409, `${input.vnum} vnum'u başka bir item tarafından kullanılıyor.`);
+  if (itemCodeTaken(db, input.code, exceptId)) throw new HttpError(409, `"${input.code}" oyun kodu başka bir item tarafından kullanılıyor.`);
   const missing = findMissingBonusTypes(db, input.bonuses.map((b) => b.bonusTypeId));
   if (missing.length) throw new HttpError(400, 'Tanımsız bonus tipi seçildi.');
   const violation = findBonusLimitViolation(db, input.bonuses);
@@ -109,7 +114,7 @@ function mapBonusType(row: Record<string, unknown>): BonusType {
   };
 }
 
-export function createApp({ db, uploadDir, auth, clientDir, publicWiki = true, importPrivateDir = `${uploadDir}-private` }: AppOptions) {
+export function createApp({ db, uploadDir, auth, clientDir, publicWiki = true, importPrivateDir = `${uploadDir}-private`, gameToken }: AppOptions) {
   const app = express();
   app.disable('x-powered-by');
   app.set('trust proxy', 'loopback');
@@ -162,6 +167,7 @@ export function createApp({ db, uploadDir, auth, clientDir, publicWiki = true, i
   api.use('/auth', authRouter(auth));
   api.get('/public/status', (_req, res) => res.json({ enabled: publicWiki }));
   api.use('/public', ...(publicWiki ? [] : [requireAuth(auth)]), wikiRouter(db));
+  api.use('/game', gameRouter(db, gameToken));
   api.use(requireAuth(auth));
 
   // ---- Dashboard ----
@@ -303,7 +309,7 @@ export function createApp({ db, uploadDir, auth, clientDir, publicWiki = true, i
   api.post('/items/:id/clone', (req, res) => {
     const source = getItem(db, idParam(req));
     if (!source) throw new HttpError(404, 'Item bulunamadı.');
-    const input = { ...itemToInput(source), vnum: nextVnum(db), name: `${source.name} (kopya)`.slice(0, 64) };
+    const input = { ...itemToInput(source), vnum: nextVnum(db), code: null, name: `${source.name} (kopya)`.slice(0, 64) };
     const id = createItem(db, input);
     logActivity(db, 'create', 'item', id, `Item kopyalandı: ${source.name} → #${input.vnum}`);
     res.status(201).json(getItem(db, id));
@@ -580,6 +586,7 @@ export function createApp({ db, uploadDir, auth, clientDir, publicWiki = true, i
 
   // ---- Droplar ----
   api.use(dropsRouter(db));
+  api.use(releasesRouter(db, uploadDir));
 
   // ---- Dışa / içe aktarma ----
   const allItems = () =>

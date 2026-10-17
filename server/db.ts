@@ -172,6 +172,23 @@ CREATE TABLE IF NOT EXISTS level_drops (
   CHECK (chance_ppm BETWEEN 0 AND 1000000), CHECK (count_min <= count_max), CHECK (upgrade_min <= upgrade_max)
 );
 
+-- Oyun ayarları (anahtar → JSON değer); bundle'ın config kısmına gider
+CREATE TABLE IF NOT EXISTS game_config (
+  key   TEXT PRIMARY KEY,
+  value TEXT NOT NULL
+);
+
+-- Oyuna giden veri: "Yayınla" anındaki numaralı, değişmez anlık görüntü (bundle)
+CREATE TABLE IF NOT EXISTS data_releases (
+  id          INTEGER PRIMARY KEY AUTOINCREMENT,
+  version     INTEGER NOT NULL UNIQUE,
+  sha256      TEXT NOT NULL,
+  bundle      TEXT NOT NULL,
+  notes       TEXT NOT NULL DEFAULT '',
+  created_at  TEXT NOT NULL DEFAULT (datetime('now')),
+  is_active   INTEGER NOT NULL DEFAULT 0
+);
+
 CREATE TABLE IF NOT EXISTS activity_log (
   id         INTEGER PRIMARY KEY AUTOINCREMENT,
   action     TEXT NOT NULL,
@@ -198,6 +215,9 @@ function migrate(db: DB) {
   const columns = new Set((db.prepare('PRAGMA table_info(items)').all() as Array<{ name: string }>).map((c) => c.name));
   if (!columns.has('monster_stats')) db.exec("ALTER TABLE items ADD COLUMN monster_stats TEXT NOT NULL DEFAULT '{}'");
   if (!columns.has('source_url')) db.exec('ALTER TABLE items ADD COLUMN source_url TEXT');
+  // Oyunun item kodu (RUSTY_SWORD): oyun vnum'a geçene kadar droplar bu kodla eşlenir
+  if (!columns.has('code')) db.exec('ALTER TABLE items ADD COLUMN code TEXT');
+  db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_items_code ON items(code) WHERE code IS NOT NULL');
   moveMonstersOutOfItems(db);
 }
 
