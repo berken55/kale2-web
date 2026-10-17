@@ -102,6 +102,7 @@ export function wikiRouter(db: DB): Router {
   const monsterListSchema = z.object({
     search: z.string().trim().max(64).optional(),
     rank: z.string().max(16).optional(),
+    sort: z.enum(['level', '-level']).default('level'),
     page: z.coerce.number().int().min(1).default(1),
     pageSize: z.coerce.number().int().min(1).max(100).default(50),
   });
@@ -111,7 +112,7 @@ export function wikiRouter(db: DB): Router {
     const list: WikiMonsterListResponse = listMonsters(db, {
       search: q.search || undefined,
       rank: q.rank || undefined,
-      sort: 'level',
+      sort: q.sort,
       page: q.page,
       pageSize: q.pageSize,
     });

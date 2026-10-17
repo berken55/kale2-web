@@ -74,7 +74,7 @@ export function ItemPicker({ onPick, placeholder = 'Item ekle: isim veya vnum…
         onFocus={() => setOpen(true)}
         onBlur={() => setTimeout(() => setOpen(false), 150)}
       />
-      {loading && <Spinner className="absolute right-3 top-3 text-gold-400" />}
+      {loading && <Spinner className="absolute right-3 top-3 text-brand-400" />}
       {open && q.trim() && !loading && (
         <div className="absolute z-20 mt-1 max-h-72 w-full overflow-y-auto rounded-lg border border-white/10 bg-ink-900 shadow-xl">
           {results.length === 0 ? (
@@ -193,8 +193,8 @@ export function DropRowsEditor<T extends Row>({
                         </div>
                       ) : r.groupId ? (
                         <div>
-                          <span className="rounded bg-gold-500/10 px-1.5 py-0.5 text-[11px] text-gold-300">Grup</span>{' '}
-                          <a href={`/admin/drop-groups/${r.groupId}`} target="_blank" rel="noreferrer" className="text-slate-100 hover:text-gold-300">
+                          <span className="rounded bg-brand-500/10 px-1.5 py-0.5 text-[11px] text-brand-300">Grup</span>{' '}
+                          <a href={`/admin/drop-groups/${r.groupId}`} target="_blank" rel="noreferrer" className="text-slate-100 hover:text-brand-300">
                             {group?.name ?? `#${r.groupId}`}
                           </a>
                           {group && <span className="ml-1 text-xs text-slate-500">({group.entryCount} item)</span>}

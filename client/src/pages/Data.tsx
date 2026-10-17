@@ -50,7 +50,7 @@ export function DataPage() {
 
       <div className="grid gap-6 lg:grid-cols-2">
         <section className="card p-6">
-          <h2 className="font-display text-lg text-gold-300">Dışa aktar</h2>
+          <h2 className="font-display text-lg text-brand-300">Dışa aktar</h2>
           <div className="mt-4 space-y-4">
             <div className="rounded-lg border border-white/5 bg-ink-850 p-4">
               <div className="font-medium text-slate-200">JSON yedeği</div>
@@ -75,7 +75,7 @@ export function DataPage() {
         </section>
 
         <section className="card p-6">
-          <h2 className="font-display text-lg text-gold-300">İçe aktar</h2>
+          <h2 className="font-display text-lg text-brand-300">İçe aktar</h2>
           <p className="mt-4 text-sm text-slate-400">
             Bu panelden alınmış bir <span className="text-slate-200">kale2-items.json</span> dosyasını yükleyin. Eksik bonus tanımları otomatik oluşturulur. Dosyadaki
             herhangi bir item geçersizse hiçbir değişiklik uygulanmaz.

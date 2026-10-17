@@ -4,12 +4,14 @@ export default {
   theme: {
     extend: {
       colors: {
-        ink: { 950: '#0b0d12', 900: '#11141b', 850: '#161a23', 800: '#1c212c', 700: '#272e3d', 600: '#36405399' },
-        gold: { 300: '#f3d58a', 400: '#e8bf5a', 500: '#d4a53a', 600: '#a87f22' },
+        // Lacivert zemin tonları (tanıtım sayfasıyla aynı aile)
+        ink: { 950: '#060a15', 900: '#0a1020', 850: '#0e1629', 800: '#131d35', 700: '#1c2a4a', 600: '#2a3b6199' },
+        // Ana vurgu rengi: mavi
+        brand: { 200: '#bfdcff', 300: '#8cc2ff', 400: '#5aa5ff', 500: '#3d8bff', 600: '#2468d8', 700: '#1a4fa8' },
       },
       fontFamily: {
-        display: ['"Cinzel"', 'serif'],
-        sans: ['"Inter"', 'system-ui', 'sans-serif'],
+        display: ['"Barlow Condensed"', '"Arial Narrow"', 'sans-serif'],
+        sans: ['"Barlow"', 'system-ui', 'sans-serif'],
       },
     },
   },

@@ -44,7 +44,7 @@ export function WikiItem() {
     );
   }
   if (error) return <WikiError message={error.message} />;
-  if (!detail) return <Spinner className="text-gold-400" />;
+  if (!detail) return <Spinner className="text-brand-400" />;
 
   const { item, bonusTypes, materials } = detail;
   const levels = availableLevels(item);
@@ -66,7 +66,7 @@ export function WikiItem() {
   return (
     <>
       <nav className="mb-3 text-xs text-slate-500">
-        <Link to="/wiki" className="hover:text-gold-300">
+        <Link to="/wiki" className="hover:text-brand-300">
           Wiki
         </Link>
         {cat && (
@@ -74,7 +74,7 @@ export function WikiItem() {
             {' / '}
             {cat.group.label}
             {' / '}
-            <Link to={cat.category.path} className="hover:text-gold-300">
+            <Link to={cat.category.path} className="hover:text-brand-300">
               {cat.category.label}
             </Link>
           </>
@@ -86,7 +86,7 @@ export function WikiItem() {
         <div className="min-w-0">
           <h1 className="font-display text-2xl sm:text-3xl" style={{ color }}>
             {item.name}
-            {level > 0 && <span className="text-gold-300">+{level}</span>}
+            {level > 0 && <span className="text-brand-300">+{level}</span>}
           </h1>
           <p className="text-sm text-slate-400">
             {labelOf(ITEM_TYPES, item.type)} · {subtypeLabel(item.type, item.subtype)} · Vnum #{item.vnum + level}
@@ -107,9 +107,9 @@ export function WikiItem() {
                 onClick={() => selectLevel(l)}
                 className={`min-w-[46px] rounded-lg border px-3 py-2 font-display text-sm tabular-nums transition ${
                   l === level
-                    ? 'border-gold-400 bg-gold-500 text-ink-950 shadow-lg shadow-gold-500/20'
+                    ? 'border-brand-400 bg-brand-500 text-white shadow-lg shadow-brand-500/20'
                     : ok
-                      ? 'border-white/10 bg-ink-850 text-slate-300 hover:border-gold-500/50 hover:text-gold-300'
+                      ? 'border-white/10 bg-ink-850 text-slate-300 hover:border-brand-500/50 hover:text-brand-300'
                       : 'cursor-not-allowed border-white/5 text-slate-700'
                 }`}
               >
@@ -185,7 +185,7 @@ export function WikiItem() {
 
       <section className="card mt-6 overflow-hidden">
         <div className="border-b border-white/5 px-5 py-4">
-          <h2 className="font-display text-lg text-gold-300">Yükseltme Tablosu</h2>
+          <h2 className="font-display text-lg text-brand-300">Yükseltme Tablosu</h2>
           <p className="text-xs text-slate-500">Her seviyedeki toplam değerler, demirci başarı şansı, Yang maliyeti ve gerekli malzemeler. Bir satıra tıklayarak o seviyeyi seçin.</p>
         </div>
         {sorted.length === 0 ? (
@@ -215,9 +215,9 @@ export function WikiItem() {
                     <tr
                       key={u.level}
                       onClick={() => selectLevel(u.level)}
-                      className={`cursor-pointer transition ${active ? 'bg-gold-500/10' : 'hover:bg-white/[0.03]'}`}
+                      className={`cursor-pointer transition ${active ? 'bg-brand-500/10' : 'hover:bg-white/[0.03]'}`}
                     >
-                      <td className={`table-cell font-display ${active ? 'text-gold-300' : 'text-slate-300'}`}>+{u.level}</td>
+                      <td className={`table-cell font-display ${active ? 'text-brand-300' : 'text-slate-300'}`}>+{u.level}</td>
                       <td className="table-cell tabular-nums text-slate-500">{item.vnum + u.level}</td>
                       {showAttack && (
                         <td className="table-cell whitespace-nowrap tabular-nums">

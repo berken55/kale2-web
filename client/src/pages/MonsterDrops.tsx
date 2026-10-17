@@ -57,7 +57,7 @@ export function DropsTab({
       <section>
         <div className="flex flex-wrap items-baseline justify-between gap-2">
           <h3 className="text-sm font-semibold text-slate-300">Genel droplar</h3>
-          <Link to="/admin/level-drops" className="text-xs text-gold-400 hover:text-gold-300">
+          <Link to="/admin/level-drops" className="text-xs text-brand-400 hover:text-brand-300">
             Genel drop tablosunu düzenle →
           </Link>
         </div>
@@ -73,7 +73,7 @@ export function DropsTab({
               const group = d.groupId !== null ? value.groups[d.groupId] : undefined;
               return (
                 <li key={i} className="flex items-center gap-2 py-2">
-                  {item ? <ItemIcon url={item.iconUrl} name={item.name} rarity={item.rarity} size={24} /> : <span className="rounded bg-gold-500/10 px-1.5 py-0.5 text-[11px] text-gold-300">Grup</span>}
+                  {item ? <ItemIcon url={item.iconUrl} name={item.name} rarity={item.rarity} size={24} /> : <span className="rounded bg-brand-500/10 px-1.5 py-0.5 text-[11px] text-brand-300">Grup</span>}
                   <span className="text-slate-200">{item?.name ?? group?.name ?? '?'}</span>
                   <span className="text-xs text-slate-500">
                     Sv. {d.levelMin}–{d.levelMax}

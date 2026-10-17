@@ -68,7 +68,7 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
             className="card w-full max-w-md p-6"
             onClick={(e) => e.stopPropagation()}
           >
-            <h2 className="font-display text-lg text-gold-300">{state.title}</h2>
+            <h2 className="font-display text-lg text-brand-300">{state.title}</h2>
             <p className="mt-2 text-sm text-slate-300">{state.message}</p>
             <div className="mt-6 flex justify-end gap-2">
               <button className="btn-ghost" onClick={() => close(false)}>
@@ -131,12 +131,33 @@ export function ItemIcon({ url, name, rarity, size = 40 }: { url: string | null;
   );
 }
 
+/** Tanıtım sayfasındaki kale işaretinin panel/wiki sürümü. */
+export function Brand({ tagline, size = 'md' }: { tagline: string; size?: 'md' | 'lg' }) {
+  const lg = size === 'lg';
+  return (
+    <span className={`inline-flex items-center ${lg ? 'gap-3' : 'gap-2.5'}`}>
+      <span
+        aria-hidden
+        className={`grid shrink-0 -skew-x-6 place-items-center border border-brand-400/60 bg-brand-500/10 text-brand-300 shadow-[inset_0_0_12px_rgba(61,139,255,0.25)] ${
+          lg ? 'h-14 w-14 text-3xl' : 'h-9 w-9 text-xl'
+        }`}
+      >
+        ♜
+      </span>
+      <span className="flex flex-col text-left">
+        <span className={`font-display font-extrabold uppercase leading-none tracking-wide text-white ${lg ? 'text-3xl' : 'text-xl'}`}>Kale2</span>
+        <span className="mt-0.5 font-display text-[10px] font-semibold uppercase tracking-[0.3em] text-brand-400">{tagline}</span>
+      </span>
+    </span>
+  );
+}
+
 export function PageHeader({ title, subtitle, actions }: { title: string; subtitle?: string; actions?: ReactNode }) {
   return (
     <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
       <div>
-        <h1 className="font-display text-2xl tracking-wide text-gold-300">{title}</h1>
-        {subtitle && <p className="mt-1 text-sm text-slate-400">{subtitle}</p>}
+        <h1 className="section-title">{title}</h1>
+        {subtitle && <p className="mt-2 text-sm text-slate-400">{subtitle}</p>}
       </div>
       {actions && <div className="flex flex-wrap gap-2">{actions}</div>}
     </div>

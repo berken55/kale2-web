@@ -28,7 +28,7 @@ export function DropGroupListPage() {
       <div className="card overflow-hidden">
         {!groups ? (
           <div className="p-6">
-            <Spinner className="text-gold-400" />
+            <Spinner className="text-brand-400" />
           </div>
         ) : groups.length === 0 ? (
           <EmptyState
@@ -54,7 +54,7 @@ export function DropGroupListPage() {
               {groups.map((g) => (
                 <tr key={g.id} className="hover:bg-white/[0.02]">
                   <td className="table-cell">
-                    <Link to={`/admin/drop-groups/${g.id}`} className="font-medium text-slate-100 hover:text-gold-300">
+                    <Link to={`/admin/drop-groups/${g.id}`} className="font-medium text-slate-100 hover:text-brand-300">
                       {g.name}
                     </Link>
                     <div className="font-mono text-xs text-slate-500">{g.code}</div>
@@ -148,7 +148,7 @@ export function DropGroupEditorPage() {
   };
 
   if (loadError) return <EmptyState title="Grup yüklenemedi" text={loadError} action={<Link to="/admin/drop-groups" className="btn-ghost">Listeye dön</Link>} />;
-  if (!form) return <Spinner className="text-gold-400" />;
+  if (!form) return <Spinner className="text-brand-400" />;
   const set = (patch: Partial<Form>) => setForm({ ...form, ...patch });
 
   return (
@@ -223,7 +223,7 @@ export function DropGroupEditorPage() {
             <ul className="space-y-1">
               {group.usedBy.map((m) => (
                 <li key={m.id}>
-                  <Link to={`/admin/monsters/${m.id}`} className="text-slate-200 hover:text-gold-300">
+                  <Link to={`/admin/monsters/${m.id}`} className="text-slate-200 hover:text-brand-300">
                     {m.name}
                   </Link>{' '}
                   <span className="text-xs text-slate-500">#{m.vnum}</span>

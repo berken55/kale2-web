@@ -56,7 +56,7 @@ export function LevelDropsPage() {
       />
       <div className="card p-5 sm:p-6">
         {!rows ? (
-          <Spinner className="text-gold-400" />
+          <Spinner className="text-brand-400" />
         ) : (
           <DropRowsEditor<LevelDrop>
             rows={rows}
@@ -83,7 +83,7 @@ export function LevelDropsPage() {
                         title={k.label}
                         aria-pressed={on}
                         onClick={() => set({ ranks: on ? r.ranks.filter((x) => x !== k.value) : [...r.ranks, k.value] })}
-                        className={`rounded px-1.5 py-0.5 text-[11px] ${on ? 'bg-gold-500/15 text-gold-300' : 'bg-white/[0.03] text-slate-600'}`}
+                        className={`rounded px-1.5 py-0.5 text-[11px] ${on ? 'bg-brand-500/15 text-brand-300' : 'bg-white/[0.03] text-slate-600'}`}
                       >
                         {RANK_SHORT[k.value]}
                       </button>

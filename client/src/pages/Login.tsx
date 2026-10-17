@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { useAuth } from '../auth';
-import { Spinner } from '../components/ui';
+import { Brand, Spinner } from '../components/ui';
 
 export function LoginPage() {
   const { login } = useAuth();
@@ -23,14 +23,12 @@ export function LoginPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[radial-gradient(ellipse_at_top,#2a2214,#0b0d12_60%)] p-4">
+    <div className="app-bg flex min-h-screen items-center justify-center p-4">
       <form onSubmit={submit} className="card w-full max-w-sm p-8">
         <div className="mb-8 text-center">
-          <svg viewBox="0 0 32 32" className="mx-auto h-12 w-12" aria-hidden>
-            <path d="M4 28V10l4 3V6l4 3V4h8v5l4-3v7l4-3v18z" fill="#d4a53a" />
-          </svg>
-          <h1 className="mt-3 font-display text-2xl text-gold-300">Kale2</h1>
-          <p className="text-xs uppercase tracking-[0.25em] text-slate-500">Yönetim Paneli</p>
+          <h1>
+            <Brand tagline="Yönetim Paneli" size="lg" />
+          </h1>
         </div>
         <label className="block">
           <span className="label">Kullanıcı adı</span>

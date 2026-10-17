@@ -57,7 +57,7 @@ export function WikiCategory({ searchMode = false }: { searchMode?: boolean }) {
   return (
     <>
       <nav className="mb-2 text-xs text-slate-500">
-        <Link to="/wiki" className="hover:text-gold-300">
+        <Link to="/wiki" className="hover:text-brand-300">
           Wiki
         </Link>
         {found && (
@@ -67,13 +67,13 @@ export function WikiCategory({ searchMode = false }: { searchMode?: boolean }) {
           </>
         )}
       </nav>
-      <h1 className="font-display text-2xl text-gold-300">{searchMode ? `“${q}” için sonuçlar` : found!.category.label}</h1>
+      <h1 className="section-title mt-1">{searchMode ? `“${q}” için sonuçlar` : found!.category.label}</h1>
       <p className="mt-1 text-sm text-slate-400">{data ? `${data.total} item` : ' '}</p>
 
       <div className="mt-5 flex flex-wrap items-center gap-x-6 gap-y-3">
-        <div className="flex items-center gap-2">
-          <span className="text-xs uppercase tracking-wide text-slate-500">Seviye</span>
-          <div className="flex overflow-hidden rounded-lg border border-white/10" role="radiogroup" aria-label="Gösterilen yükseltme seviyesi">
+        <div className="flex min-w-0 max-w-full items-center gap-2">
+          <span className="font-display text-xs font-semibold uppercase tracking-wider text-slate-400">Seviye</span>
+          <div className="flex min-w-0 overflow-x-auto rounded-lg border border-white/10" role="radiogroup" aria-label="Gösterilen yükseltme seviyesi">
             {LEVELS.map((l) => (
               <button
                 key={l}
@@ -81,7 +81,7 @@ export function WikiCategory({ searchMode = false }: { searchMode?: boolean }) {
                 aria-checked={l === level}
                 onClick={() => setParam('lvl', l ? String(l) : '')}
                 className={`px-2.5 py-1.5 font-display text-sm tabular-nums transition ${
-                  l === level ? 'bg-gold-500 text-ink-950' : 'text-slate-400 hover:bg-white/5 hover:text-slate-200'
+                  l === level ? 'bg-brand-500 text-white' : 'text-slate-400 hover:bg-white/5 hover:text-slate-200'
                 }`}
               >
                 +{l}
@@ -102,7 +102,7 @@ export function WikiCategory({ searchMode = false }: { searchMode?: boolean }) {
       <div className="card mt-4 overflow-hidden">
         {!data ? (
           <div className="p-6">
-            <Spinner className="text-gold-400" />
+            <Spinner className="text-brand-400" />
           </div>
         ) : items.length === 0 ? (
           <EmptyState title="Item bulunamadı" text={searchMode ? 'Başka bir isim veya vnum deneyin.' : 'Bu kategoride henüz item yok.'} />

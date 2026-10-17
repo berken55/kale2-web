@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
 import { useAuth } from '../auth';
+import { Brand } from './ui';
 
 const NAV = [
   { to: '/admin', label: 'Genel Bakış', end: true, icon: 'M3 12l9-9 9 9M5 10v10h5v-6h4v6h5V10' },
@@ -35,8 +36,10 @@ export function Layout() {
           end={n.end}
           onClick={() => setOpen(false)}
           className={({ isActive }) =>
-            `flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition ${
-              isActive ? 'bg-gold-500/15 text-gold-300' : 'text-slate-400 hover:bg-white/5 hover:text-slate-200'
+            `flex items-center gap-3 rounded-lg border-l-2 px-3 py-2 font-display text-[15px] font-semibold uppercase tracking-wide transition ${
+              isActive
+                ? 'border-brand-400 bg-gradient-to-r from-brand-500/20 to-transparent text-white'
+                : 'border-transparent text-slate-400 hover:bg-white/5 hover:text-slate-200'
             }`
           }
         >
@@ -48,27 +51,21 @@ export function Layout() {
   );
 
   const brand = (
-    <div className="flex items-center gap-2 px-2">
-      <svg viewBox="0 0 32 32" className="h-7 w-7" aria-hidden>
-        <path d="M4 28V10l4 3V6l4 3V4h8v5l4-3v7l4-3v18z" fill="#d4a53a" />
-      </svg>
-      <div>
-        <div className="font-display text-lg leading-none text-gold-300">Kale2</div>
-        <div className="text-[10px] uppercase tracking-[0.2em] text-slate-500">Yönetim Paneli</div>
-      </div>
+    <div className="px-2">
+      <Brand tagline="Yönetim Paneli" />
     </div>
   );
 
   return (
-    <div className="min-h-screen lg:flex">
-      <aside className="hidden w-60 shrink-0 flex-col gap-8 border-r border-white/5 bg-ink-900/60 p-4 lg:flex lg:sticky lg:top-0 lg:h-screen">
+    <div className="app-bg min-h-screen lg:flex">
+      <aside className="hidden w-60 shrink-0 flex-col gap-8 border-r border-white/[0.07] bg-ink-900/70 p-4 backdrop-blur lg:flex lg:sticky lg:top-0 lg:h-screen">
         {brand}
         {nav}
-        <a href="/wiki" target="_blank" rel="noreferrer" className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-slate-400 hover:bg-white/5 hover:text-slate-200">
+        <a href="/wiki" target="_blank" rel="noreferrer" className="flex items-center gap-3 rounded-lg px-3 py-2 font-display text-[15px] font-semibold uppercase tracking-wide text-slate-500 hover:bg-white/5 hover:text-slate-200">
           <Icon d="M4 5a2 2 0 012-2h13v16H6a2 2 0 00-2 2zM4 5v16M8 7h7" />
           Wiki ↗
         </a>
-        <a href="/" target="_blank" rel="noreferrer" className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-slate-400 hover:bg-white/5 hover:text-slate-200">
+        <a href="/" target="_blank" rel="noreferrer" className="flex items-center gap-3 rounded-lg px-3 py-2 font-display text-[15px] font-semibold uppercase tracking-wide text-slate-500 hover:bg-white/5 hover:text-slate-200">
           <Icon d="M4 12h16M12 4v16" />
           Website ↗
         </a>
@@ -76,7 +73,7 @@ export function Layout() {
           <div className="truncate">
             Giriş: <span className="text-slate-200">{username}</span>
           </div>
-          <button className="mt-2 text-gold-400 hover:text-gold-300" onClick={logout}>
+          <button className="mt-2 text-brand-400 hover:text-brand-300" onClick={logout}>
             Çıkış yap
           </button>
         </div>
@@ -91,7 +88,7 @@ export function Layout() {
       {open && (
         <div className="border-b border-white/5 bg-ink-900 p-4 lg:hidden">
           {nav}
-          <button className="mt-3 px-3 text-sm text-gold-400" onClick={logout}>
+          <button className="mt-3 px-3 text-sm text-brand-400" onClick={logout}>
             Çıkış yap ({username})
           </button>
         </div>

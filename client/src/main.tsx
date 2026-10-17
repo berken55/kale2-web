@@ -29,7 +29,7 @@ function AdminApp() {
   const { username, loading } = useAuth();
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center text-gold-400">
+      <div className="app-bg flex min-h-screen items-center justify-center text-brand-400">
         <Spinner className="h-6 w-6" />
       </div>
     );

@@ -135,7 +135,7 @@ export function MapEditorPage() {
   };
 
   if (loadError) return <EmptyState title="Harita yüklenemedi" text={loadError} action={<Link to="/admin/maps" className="btn-ghost">Listeye dön</Link>} />;
-  if (!map) return <Spinner className="text-gold-400" />;
+  if (!map) return <Spinner className="text-brand-400" />;
 
   const w = map.worldMaxX - map.worldMinX;
   const h = map.worldMaxZ - map.worldMinZ;
@@ -277,7 +277,7 @@ export function MapEditorPage() {
             ).map(([m, label]) => (
               <button
                 key={m}
-                className={`rounded-lg border px-3 py-1.5 ${mode === m ? 'border-gold-500/60 bg-gold-500/15 text-gold-300' : 'border-white/10 text-slate-400 hover:text-slate-200'}`}
+                className={`rounded-lg border px-3 py-1.5 ${mode === m ? 'border-brand-500/60 bg-brand-500/15 text-brand-300' : 'border-white/10 text-slate-400 hover:text-slate-200'}`}
                 onClick={() => {
                   setMode(m);
                   setDraft([]);
@@ -514,7 +514,7 @@ function RegionPanel({
                     </div>
                   </label>
                   <label className="flex items-end gap-2 pb-1 text-slate-400">
-                    <input type="checkbox" className="h-4 w-4 accent-gold-500" checked={s.announce} onChange={(e) => setSpawn(k, { announce: e.target.checked })} />
+                    <input type="checkbox" className="h-4 w-4 accent-brand-500" checked={s.announce} onChange={(e) => setSpawn(k, { announce: e.target.checked })} />
                     Duyur
                   </label>
                   {s.kind === 'EVENT' && (

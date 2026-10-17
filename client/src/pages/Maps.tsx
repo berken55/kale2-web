@@ -51,7 +51,7 @@ export function MapListPage() {
       <div className="card overflow-hidden">
         {!maps ? (
           <div className="p-6">
-            <Spinner className="text-gold-400" />
+            <Spinner className="text-brand-400" />
           </div>
         ) : maps.length === 0 ? (
           <EmptyState

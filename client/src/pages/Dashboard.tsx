@@ -26,7 +26,7 @@ export function DashboardPage() {
   }, []);
 
   if (error) return <p className="text-red-400">{error}</p>;
-  if (!stats) return <Spinner className="text-gold-400" />;
+  if (!stats) return <Spinner className="text-brand-400" />;
 
   const tiles = [
     { label: 'Toplam item', value: stats.totalItems },
@@ -70,11 +70,11 @@ export function DashboardPage() {
               <li key={t.type}>
                 <Link to={`/admin/items?type=${t.type}`} className="group block">
                   <div className="mb-1 flex justify-between text-sm">
-                    <span className="text-slate-300 group-hover:text-gold-300">{labelOf(ITEM_TYPES, t.type)}</span>
+                    <span className="text-slate-300 group-hover:text-brand-300">{labelOf(ITEM_TYPES, t.type)}</span>
                     <span className="tabular-nums text-slate-500">{t.count}</span>
                   </div>
                   <div className="h-1.5 rounded-full bg-white/5">
-                    <div className="h-full rounded-full bg-gold-500" style={{ width: `${(t.count / maxType) * 100}%` }} />
+                    <div className="h-full rounded-full bg-brand-500" style={{ width: `${(t.count / maxType) * 100}%` }} />
                   </div>
                 </Link>
               </li>
@@ -109,7 +109,7 @@ export function DashboardPage() {
             {stats.recentActivity.map((a) => (
               <li key={a.id} className="text-sm">
                 {a.entity === 'item' && a.action !== 'delete' && a.entityId ? (
-                  <Link to={`/admin/items/${a.entityId}`} className="text-slate-200 hover:text-gold-300">
+                  <Link to={`/admin/items/${a.entityId}`} className="text-slate-200 hover:text-brand-300">
                     {a.summary}
                   </Link>
                 ) : (

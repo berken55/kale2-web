@@ -291,7 +291,7 @@ export function MonsterEditorPage() {
       />
     );
   }
-  if (!form) return <Spinner className="text-gold-400" />;
+  if (!form) return <Spinner className="text-brand-400" />;
 
   const setName = (name: string) => {
     update('name', name);
@@ -327,11 +327,11 @@ export function MonsterEditorPage() {
       />
 
       {importInfo && (
-        <div className="mb-5 rounded-xl border border-gold-500/30 bg-gold-500/5 p-4 text-sm">
+        <div className="mb-5 rounded-xl border border-brand-500/30 bg-brand-500/5 p-4 text-sm">
           <div className="flex flex-wrap items-start justify-between gap-2">
             <div>
-              <div className="font-medium text-gold-300">{importInfo.draft.source.importerName} kaynağından içe aktarıldı — henüz kaydedilmedi</div>
-              <a href={importInfo.draft.source.url} target="_blank" rel="noreferrer" className="break-all text-xs text-slate-400 hover:text-gold-300">
+              <div className="font-medium text-brand-300">{importInfo.draft.source.importerName} kaynağından içe aktarıldı — henüz kaydedilmedi</div>
+              <a href={importInfo.draft.source.url} target="_blank" rel="noreferrer" className="break-all text-xs text-slate-400 hover:text-brand-300">
                 {importInfo.draft.source.url}
               </a>
             </div>
@@ -351,13 +351,13 @@ export function MonsterEditorPage() {
               <span className="text-slate-400">Kaydedince indir:</span>
               {importInfo.draft.assets.iconUrl && (
                 <label className="flex items-center gap-2">
-                  <input type="checkbox" className="h-4 w-4 accent-gold-500" checked={importInfo.useIcon} onChange={(e) => setImportInfo({ ...importInfo, useIcon: e.target.checked })} />
+                  <input type="checkbox" className="h-4 w-4 accent-brand-500" checked={importInfo.useIcon} onChange={(e) => setImportInfo({ ...importInfo, useIcon: e.target.checked })} />
                   İkon
                 </label>
               )}
               {importInfo.draft.assets.modelUrl && (
                 <label className="flex items-center gap-2">
-                  <input type="checkbox" className="h-4 w-4 accent-gold-500" checked={importInfo.useModel} onChange={(e) => setImportInfo({ ...importInfo, useModel: e.target.checked })} />
+                  <input type="checkbox" className="h-4 w-4 accent-brand-500" checked={importInfo.useModel} onChange={(e) => setImportInfo({ ...importInfo, useModel: e.target.checked })} />
                   3D model
                 </label>
               )}
@@ -376,7 +376,7 @@ export function MonsterEditorPage() {
                 aria-selected={tab === t.key}
                 onClick={() => setTab(t.key)}
                 className={`-mb-px whitespace-nowrap border-b-2 px-4 py-2.5 text-sm transition ${
-                  tab === t.key ? 'border-gold-500 text-gold-300' : 'border-transparent text-slate-400 hover:text-slate-200'
+                  tab === t.key ? 'border-brand-500 text-brand-300' : 'border-transparent text-slate-400 hover:text-slate-200'
                 }`}
               >
                 {t.label}
@@ -426,7 +426,7 @@ export function MonsterEditorPage() {
                 {form.sourceUrl && (
                   <p className="text-xs text-slate-500 sm:col-span-2">
                     Kaynak:{' '}
-                    <a href={form.sourceUrl} target="_blank" rel="noreferrer" className="break-all hover:text-gold-300">
+                    <a href={form.sourceUrl} target="_blank" rel="noreferrer" className="break-all hover:text-brand-300">
                       {form.sourceUrl}
                     </a>
                   </p>
@@ -463,7 +463,7 @@ export function MonsterEditorPage() {
             {tab === 'ai' && (
               <div className="space-y-6">
                 <label className="flex items-start gap-3">
-                  <input type="checkbox" className="mt-0.5 h-4 w-4 accent-gold-500" checked={form.aggressive} onChange={(e) => update('aggressive', e.target.checked)} />
+                  <input type="checkbox" className="mt-0.5 h-4 w-4 accent-brand-500" checked={form.aggressive} onChange={(e) => update('aggressive', e.target.checked)} />
                   <span>
                     <span className="text-sm text-slate-200">Saldırgan</span>
                     <span className="block text-xs text-slate-500">Oyuncuyu fark edince kendisi saldırır; kapalıysa yalnızca vurulunca karşılık verir.</span>
@@ -485,7 +485,7 @@ export function MonsterEditorPage() {
                           aria-pressed={on}
                           onClick={() => update('flags', on ? form.flags.filter((x) => x !== f.value) : [...form.flags, f.value])}
                           className={`rounded-full border px-3 py-1 text-xs transition ${
-                            on ? 'border-gold-500/60 bg-gold-500/15 text-gold-300' : 'border-white/10 text-slate-400 hover:text-slate-200'
+                            on ? 'border-brand-500/60 bg-brand-500/15 text-brand-300' : 'border-white/10 text-slate-400 hover:text-slate-200'
                           }`}
                         >
                           {f.label}
@@ -532,7 +532,7 @@ export function MonsterEditorPage() {
                   error={errors.drops}
                 />
               ) : monster ? (
-                <Spinner className="text-gold-400" />
+                <Spinner className="text-brand-400" />
               ) : (
                 <EmptyState title="Önce canavarı oluşturun" text="Drop ekleyebilmek için canavarı bir kez kaydetmeniz gerekiyor." />
               ))}
@@ -679,7 +679,7 @@ function MonsterCard({ form, iconUrl }: { form: Form; iconUrl: string | null }) 
       <div className="flex items-center gap-3">
         <MonsterIcon url={iconUrl} name={form.name || '?'} rank={form.rank} size={48} />
         <div className="min-w-0">
-          <div className="truncate font-display text-gold-300">{form.name || 'İsimsiz'}</div>
+          <div className="truncate font-display text-brand-300">{form.name || 'İsimsiz'}</div>
           <div className="mt-0.5 flex items-center gap-2 text-xs text-slate-400">
             <RankBadge rank={form.rank} /> Sv. {form.level}
           </div>

@@ -33,15 +33,15 @@ export function WikiMonsterList() {
   return (
     <>
       <nav className="mb-2 text-xs text-slate-500">
-        <Link to="/wiki" className="hover:text-gold-300">
+        <Link to="/wiki" className="hover:text-brand-300">
           Wiki
         </Link>{' '}
         / Canavarlar
       </nav>
-      <h1 className="font-display text-2xl text-gold-300">{title}</h1>
+      <h1 className="section-title mt-1">{title}</h1>
       <p className="mb-5 mt-1 text-sm text-slate-400">{data ? `${data.total} canavar · seviyeye göre` : ' '}</p>
       {!data ? (
-        <Spinner className="text-gold-400" />
+        <Spinner className="text-brand-400" />
       ) : data.monsters.length === 0 ? (
         <EmptyState title="Bu grupta canavar yok" />
       ) : (
@@ -61,7 +61,7 @@ export function WikiMonsterList() {
               {data.monsters.map((m) => (
                 <tr key={m.id} className="hover:bg-white/[0.02]">
                   <td className="table-cell">
-                    <Link to={`/wiki/canavar/${m.vnum}`} className="flex items-center gap-3 font-medium text-slate-100 hover:text-gold-300">
+                    <Link to={`/wiki/canavar/${m.vnum}`} className="flex items-center gap-3 font-medium text-slate-100 hover:text-brand-300">
                       <MonsterIcon url={m.iconUrl} name={m.name} rank={m.rank} size={32} />
                       {m.name}
                     </Link>
@@ -100,7 +100,7 @@ export function WikiMonster() {
   }, [vnum]);
 
   if (error) return <WikiError message={error} />;
-  if (!m) return <Spinner className="text-gold-400" />;
+  if (!m) return <Spinner className="text-brand-400" />;
 
   const stats: Array<[string, string]> = [
     ['HP', formatNumber(m.hp)],
@@ -122,18 +122,18 @@ export function WikiMonster() {
   return (
     <>
       <nav className="mb-2 text-xs text-slate-500">
-        <Link to="/wiki" className="hover:text-gold-300">
+        <Link to="/wiki" className="hover:text-brand-300">
           Wiki
         </Link>{' '}
         /{' '}
-        <Link to="/wiki/canavarlar" className="hover:text-gold-300">
+        <Link to="/wiki/canavarlar" className="hover:text-brand-300">
           Canavarlar
         </Link>
       </nav>
       <div className="flex items-center gap-4">
         <MonsterIcon url={m.iconUrl} name={m.name} rank={m.rank} size={56} />
         <div>
-          <h1 className="font-display text-2xl text-gold-300">{m.name}</h1>
+          <h1 className="font-display text-3xl text-white">{m.name}</h1>
           <div className="mt-1 flex items-center gap-2 text-sm text-slate-400">
             <RankBadge rank={m.rank} /> Seviye {m.level}
           </div>

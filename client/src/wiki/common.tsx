@@ -90,7 +90,7 @@ export function ClassPills({ classes }: { classes: string[] }) {
           <span
             key={c.value}
             title={c.label}
-            className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${on ? 'bg-gold-500/15 text-gold-300' : 'bg-white/[0.03] text-slate-600 line-through'}`}
+            className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${on ? 'bg-brand-500/15 text-brand-300' : 'bg-white/[0.03] text-slate-600 line-through'}`}
           >
             {CLASS_SHORT[c.value]}
           </span>

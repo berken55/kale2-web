@@ -166,7 +166,7 @@ export function ItemListPage() {
           </select>
           {hasFilters && (
             <button
-              className="text-sm text-gold-400 hover:text-gold-300"
+              className="text-sm text-brand-400 hover:text-brand-300"
               onClick={() => {
                 setSearch('');
                 setParams({}, { replace: true });
@@ -175,7 +175,7 @@ export function ItemListPage() {
               Filtreleri temizle
             </button>
           )}
-          {loading && <Spinner className="text-gold-400" />}
+          {loading && <Spinner className="text-brand-400" />}
         </div>
       </div>
 
@@ -211,7 +211,7 @@ export function ItemListPage() {
                 {data?.items.map((item) => (
                   <tr key={item.id} className="hover:bg-white/[0.02]">
                     <td className="table-cell">
-                      <Link to={`/admin/items/${item.id}`} className="flex items-center gap-3 font-medium text-slate-100 hover:text-gold-300">
+                      <Link to={`/admin/items/${item.id}`} className="flex items-center gap-3 font-medium text-slate-100 hover:text-brand-300">
                         <ItemIcon url={item.iconUrl} name={item.name} rarity={item.rarity} size={36} />
                         {item.name}
                       </Link>

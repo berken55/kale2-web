@@ -144,7 +144,7 @@ export function ImportDialog({
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/70 p-4 sm:py-12" onClick={() => !loading && onClose()}>
       <div role="dialog" aria-modal="true" aria-labelledby="import-title" className="card w-full max-w-2xl p-6" onClick={(e) => e.stopPropagation()}>
-        <h2 id="import-title" className="font-display text-xl text-gold-300">
+        <h2 id="import-title" className="font-display text-xl text-brand-300">
           {refreshOf ? 'Kaynaktan güncelle' : 'Linkten içe aktar'}
         </h2>
         <p className="mt-1 text-sm text-slate-400">
@@ -298,13 +298,13 @@ export function ImportDialog({
                 <div className="text-slate-300">Kaydettikten sonra kaynaktan indirilecek dosyalar:</div>
                 {draft.assets.iconUrl && (
                   <label className="flex items-center gap-2 text-slate-300">
-                    <input type="checkbox" className="h-4 w-4 accent-gold-500" checked={useIcon} onChange={(e) => setUseIcon(e.target.checked)} />
+                    <input type="checkbox" className="h-4 w-4 accent-brand-500" checked={useIcon} onChange={(e) => setUseIcon(e.target.checked)} />
                     İkon
                   </label>
                 )}
                 {draft.assets.modelUrl && (
                   <label className="flex items-center gap-2 text-slate-300">
-                    <input type="checkbox" className="h-4 w-4 accent-gold-500" checked={useModel} onChange={(e) => setUseModel(e.target.checked)} />
+                    <input type="checkbox" className="h-4 w-4 accent-brand-500" checked={useModel} onChange={(e) => setUseModel(e.target.checked)} />
                     3D model <span className="truncate text-xs text-slate-500">({decodeURIComponent(draft.assets.modelUrl.split('/').pop() ?? '')})</span>
                   </label>
                 )}
@@ -312,14 +312,14 @@ export function ImportDialog({
             )}
 
             {!refreshOf && draft.existingItemId && (
-              <fieldset className="space-y-2 rounded-lg border border-gold-500/20 bg-gold-500/5 p-3 text-sm">
-                <legend className="px-1 text-gold-300">#{it.vnum} vnum'lu item panelde zaten var</legend>
+              <fieldset className="space-y-2 rounded-lg border border-brand-500/20 bg-brand-500/5 p-3 text-sm">
+                <legend className="px-1 text-brand-300">#{it.vnum} vnum'lu item panelde zaten var</legend>
                 <label className="flex items-center gap-2 text-slate-300">
-                  <input type="radio" name="target" className="accent-gold-500" checked={target === 'existing'} onChange={() => setTarget('existing')} />
+                  <input type="radio" name="target" className="accent-brand-500" checked={target === 'existing'} onChange={() => setTarget('existing')} />
                   Mevcut itemi bu verilerle güncelle (kaydetmeden önce düzenleyicide görürsünüz)
                 </label>
                 <label className="flex items-center gap-2 text-slate-300">
-                  <input type="radio" name="target" className="accent-gold-500" checked={target === 'new'} onChange={() => setTarget('new')} />
+                  <input type="radio" name="target" className="accent-brand-500" checked={target === 'new'} onChange={() => setTarget('new')} />
                   Yeni bir vnum ile ayrı item olarak oluştur
                 </label>
               </fieldset>

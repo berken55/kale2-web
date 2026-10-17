@@ -215,7 +215,7 @@ export function ModelViewer({ url, className = '' }: { url: string; className?: 
                   </select>
                 </div>
                 <div className="flex items-center gap-2 tabular-nums">
-                  <input type="range" aria-label="Animasyon zamanı" className="min-w-0 flex-1 accent-gold-500" min="0" max={duration} step="0.01" value={Math.min(time, duration)} disabled={!duration} onChange={(e) => {
+                  <input type="range" aria-label="Animasyon zamanı" className="min-w-0 flex-1 accent-brand-500" min="0" max={duration} step="0.01" value={Math.min(time, duration)} disabled={!duration} onChange={(e) => {
                     const value = Number(e.target.value);
                     sceneRef.current.animation?.seek(value);
                     setTime(value);

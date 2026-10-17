@@ -165,7 +165,7 @@ export function MonsterListPage() {
           </select>
           {hasFilters && (
             <button
-              className="text-sm text-gold-400 hover:text-gold-300"
+              className="text-sm text-brand-400 hover:text-brand-300"
               onClick={() => {
                 setSearch('');
                 setParams({}, { replace: true });
@@ -174,7 +174,7 @@ export function MonsterListPage() {
               Filtreleri temizle
             </button>
           )}
-          {loading && <Spinner className="text-gold-400" />}
+          {loading && <Spinner className="text-brand-400" />}
         </div>
       </div>
 
@@ -211,7 +211,7 @@ export function MonsterListPage() {
                 {data?.monsters.map((m) => (
                   <tr key={m.id} className="hover:bg-white/[0.02]">
                     <td className="table-cell">
-                      <Link to={`/admin/monsters/${m.id}`} className="flex items-center gap-3 font-medium text-slate-100 hover:text-gold-300">
+                      <Link to={`/admin/monsters/${m.id}`} className="flex items-center gap-3 font-medium text-slate-100 hover:text-brand-300">
                         <MonsterIcon url={m.iconUrl} name={m.name} rank={m.rank} size={36} />
                         <span>
                           {m.name}
@@ -328,7 +328,7 @@ function MonsterImportDialog({ open, onClose, onConfirm }: { open: boolean; onCl
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={() => !loading && onClose()}>
       <div role="dialog" aria-modal="true" className="card max-h-[90vh] w-full max-w-xl overflow-y-auto p-6" onClick={(e) => e.stopPropagation()}>
-        <h2 className="font-display text-lg text-gold-300">Linkten canavar içe aktar</h2>
+        <h2 className="font-display text-lg text-brand-300">Linkten canavar içe aktar</h2>
         <p className="mt-1 text-sm text-slate-400">
           metin2alerts canavar sayfası (ör. <span className="font-mono text-xs">metin2alerts.com/en/wiki/mob/101-wild-dog</span>) ya da m2icondb canavar
           bağlantısı. Hiçbir şey otomatik kaydedilmez.

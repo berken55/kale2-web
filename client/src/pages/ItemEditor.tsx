@@ -266,7 +266,7 @@ export function ItemEditorPage() {
       />
     );
   }
-  if (!form) return <Spinner className="text-gold-400" />;
+  if (!form) return <Spinner className="text-brand-400" />;
 
   const tabErrors: Partial<Record<TabKey, boolean>> = {
     general: ['vnum', 'name', 'type', 'subtype', 'levelRequired', 'buyPrice', 'sellPrice', 'stackSize', 'description'].some((k) => errors[k]),
@@ -309,13 +309,13 @@ export function ItemEditorPage() {
       />
 
       {importInfo && (
-        <div className="mb-5 rounded-xl border border-gold-500/30 bg-gold-500/5 p-4 text-sm">
+        <div className="mb-5 rounded-xl border border-brand-500/30 bg-brand-500/5 p-4 text-sm">
           <div className="flex flex-wrap items-start justify-between gap-2">
             <div>
-              <div className="font-medium text-gold-300">
+              <div className="font-medium text-brand-300">
                 {importInfo.draft.source.importerName} kaynağından içe aktarıldı — henüz kaydedilmedi
               </div>
-              <a href={importInfo.draft.source.url} target="_blank" rel="noreferrer" className="break-all text-xs text-slate-400 hover:text-gold-300">
+              <a href={importInfo.draft.source.url} target="_blank" rel="noreferrer" className="break-all text-xs text-slate-400 hover:text-brand-300">
                 {importInfo.draft.source.url}
               </a>
             </div>
@@ -336,13 +336,13 @@ export function ItemEditorPage() {
               <span className="text-slate-400">Kaydedince indir:</span>
               {importInfo.assets.iconUrl && (
                 <label className="flex items-center gap-2">
-                  <input type="checkbox" className="h-4 w-4 accent-gold-500" checked={importInfo.useIcon} onChange={(e) => setImportInfo({ ...importInfo, useIcon: e.target.checked })} />
+                  <input type="checkbox" className="h-4 w-4 accent-brand-500" checked={importInfo.useIcon} onChange={(e) => setImportInfo({ ...importInfo, useIcon: e.target.checked })} />
                   İkon
                 </label>
               )}
               {importInfo.assets.modelUrl && (
                 <label className="flex items-center gap-2">
-                  <input type="checkbox" className="h-4 w-4 accent-gold-500" checked={importInfo.useModel} onChange={(e) => setImportInfo({ ...importInfo, useModel: e.target.checked })} />
+                  <input type="checkbox" className="h-4 w-4 accent-brand-500" checked={importInfo.useModel} onChange={(e) => setImportInfo({ ...importInfo, useModel: e.target.checked })} />
                   3D model
                 </label>
               )}
@@ -363,7 +363,7 @@ export function ItemEditorPage() {
                 aria-selected={tab === t.key}
                 onClick={() => setTab(t.key)}
                 className={`-mb-px whitespace-nowrap border-b-2 px-4 py-2.5 text-sm transition ${
-                  tab === t.key ? 'border-gold-500 text-gold-300' : 'border-transparent text-slate-400 hover:text-slate-200'
+                  tab === t.key ? 'border-brand-500 text-brand-300' : 'border-transparent text-slate-400 hover:text-slate-200'
                 }`}
               >
                 {t.label}
@@ -491,7 +491,7 @@ function GeneralTab({ form, update, errors }: { form: Form; update: Update; erro
                 aria-pressed={on}
                 onClick={() => update('classes', on ? form.classes.filter((x) => x !== c.value) : [...form.classes, c.value])}
                 className={`rounded-lg border px-3 py-1.5 text-sm transition ${
-                  on ? 'border-gold-500/60 bg-gold-500/15 text-gold-300' : 'border-white/10 text-slate-400 hover:border-white/20'
+                  on ? 'border-brand-500/60 bg-brand-500/15 text-brand-300' : 'border-white/10 text-slate-400 hover:border-white/20'
                 }`}
               >
                 {c.label}
@@ -523,7 +523,7 @@ function GeneralTab({ form, update, errors }: { form: Form; update: Update; erro
         </Field>
       )}
       <label className="flex items-center gap-2 self-end pb-2 text-sm text-slate-300">
-        <input type="checkbox" className="h-4 w-4 accent-gold-500" checked={form.tradable} onChange={(e) => update('tradable', e.target.checked)} />
+        <input type="checkbox" className="h-4 w-4 accent-brand-500" checked={form.tradable} onChange={(e) => update('tradable', e.target.checked)} />
         Ticareti yapılabilir
       </label>
 
@@ -681,7 +681,7 @@ function BonusesTab({
           <button className="btn-ghost" disabled={!adding} onClick={add}>
             + Ekle
           </button>
-          <Link to="/admin/bonuses" className="self-center text-sm text-gold-400 hover:text-gold-300">
+          <Link to="/admin/bonuses" className="self-center text-sm text-brand-400 hover:text-brand-300">
             Bonus tanımlarını yönet
           </Link>
         </div>
@@ -762,7 +762,7 @@ function UpgradesTab({
       {error && <p className="text-sm text-red-400">{error}</p>}
 
       <details className="rounded-lg border border-white/10 bg-ink-850 p-4" open={upgrades.length === 0}>
-        <summary className="cursor-pointer text-sm font-medium text-gold-300">Otomatik tablo oluşturucu</summary>
+        <summary className="cursor-pointer text-sm font-medium text-brand-300">Otomatik tablo oluşturucu</summary>
         <div className="mt-4 grid gap-4 sm:grid-cols-3 lg:grid-cols-4">
           <Field label="Son seviye">
             <NumberInput value={gen.maxLevel} min={0} max={MAX_UPGRADE_LEVEL} onChange={setGenField('maxLevel')} />
@@ -814,7 +814,7 @@ function UpgradesTab({
             <tbody className="divide-y divide-white/5">
               {sorted.map((u) => (
                 <tr key={u.level}>
-                  <td className="table-cell font-display text-gold-300">+{u.level}</td>
+                  <td className="table-cell font-display text-brand-300">+{u.level}</td>
                   {attack && (
                     <td className="table-cell">
                       <NumberInput aria-label={`+${u.level} saldırı`} className="w-24" value={u.attackBonus} min={0} onChange={(v) => set(u.level, { attackBonus: v })} />
@@ -940,14 +940,14 @@ export function UploadZone({
       onDragLeave={() => setOver(false)}
       onDrop={onDrop}
       className={`flex flex-col items-center justify-center rounded-xl border-2 border-dashed px-6 py-8 text-center transition ${
-        over ? 'border-gold-500 bg-gold-500/5' : 'border-white/10'
+        over ? 'border-brand-500 bg-brand-500/5' : 'border-white/10'
       }`}
     >
       {busy ? (
         <div className="w-full max-w-xs">
           <div className="mb-2 text-sm text-slate-300">Yükleniyor… %{progress}</div>
           <div className="h-1.5 rounded-full bg-white/10">
-            <div className="h-full rounded-full bg-gold-500 transition-all" style={{ width: `${progress}%` }} />
+            <div className="h-full rounded-full bg-brand-500 transition-all" style={{ width: `${progress}%` }} />
           </div>
         </div>
       ) : (

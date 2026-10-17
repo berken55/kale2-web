@@ -76,7 +76,7 @@ export function BonusTypesPage() {
 
       {editing && (
         <form onSubmit={submit} className="card mb-6 p-5">
-          <h2 className="mb-4 font-display text-gold-300">{editing.id ? 'Bonusu düzenle' : 'Yeni bonus'}</h2>
+          <h2 className="mb-4 font-display text-brand-300">{editing.id ? 'Bonusu düzenle' : 'Yeni bonus'}</h2>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <Field label="Kod" hint="Örn. ATTBONUS_HUMAN">
               <input
@@ -122,7 +122,7 @@ export function BonusTypesPage() {
         </div>
         {!rows ? (
           <div className="p-6">
-            <Spinner className="text-gold-400" />
+            <Spinner className="text-brand-400" />
           </div>
         ) : (
           <div className="overflow-x-auto">

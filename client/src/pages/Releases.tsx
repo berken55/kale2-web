@@ -13,7 +13,7 @@ const KIND_LABEL: Record<ReleaseChange['kind'], string> = {
 };
 const CHANGE_STYLE: Record<ReleaseChange['change'], [string, string]> = {
   added: ['Yeni', 'bg-emerald-500/10 text-emerald-300'],
-  changed: ['Değişti', 'bg-gold-500/10 text-gold-300'],
+  changed: ['Değişti', 'bg-brand-500/10 text-brand-300'],
   removed: ['Silindi', 'bg-red-500/10 text-red-300'],
 };
 
@@ -78,7 +78,7 @@ export function ReleasesPage() {
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
         <section className="card p-5 sm:p-6">
           <div className="flex flex-wrap items-baseline justify-between gap-2">
-            <h2 className="font-display text-gold-300">Yayınlanacaklar</h2>
+            <h2 className="font-display text-brand-300">Yayınlanacaklar</h2>
             {preview && (
               <span className="text-xs text-slate-500">
                 {preview.counts.monsters} canavar · {preview.counts.items} item · {preview.counts.dropGroups} drop grubu · {preview.counts.levelDrops} genel drop · {preview.counts.regions} spawn bölgesi
@@ -87,7 +87,7 @@ export function ReleasesPage() {
             )}
           </div>
           {!preview ? (
-            <Spinner className="mt-4 text-gold-400" />
+            <Spinner className="mt-4 text-brand-400" />
           ) : (
             <div className="mt-4 space-y-4 text-sm">
               {preview.errors.length > 0 && (
@@ -156,19 +156,19 @@ export function ReleasesPage() {
         <aside className="card h-fit p-4">
           <h2 className="mb-3 text-xs font-medium uppercase tracking-wide text-slate-500">Sürümler</h2>
           {!releases ? (
-            <Spinner className="text-gold-400" />
+            <Spinner className="text-brand-400" />
           ) : releases.length === 0 ? (
             <p className="text-sm text-slate-500">Henüz yayın yok.</p>
           ) : (
             <ul className="space-y-2 text-sm">
               {releases.map((r) => (
-                <li key={r.id} className={`rounded-lg border p-3 ${r.isActive ? 'border-gold-500/40 bg-gold-500/5' : 'border-white/5'}`}>
+                <li key={r.id} className={`rounded-lg border p-3 ${r.isActive ? 'border-brand-500/40 bg-brand-500/5' : 'border-white/5'}`}>
                   <div className="flex items-center justify-between gap-2">
                     <span className="font-display text-slate-100">v{r.version}</span>
                     {r.isActive ? (
-                      <span className="text-xs text-gold-300">Oyunda aktif</span>
+                      <span className="text-xs text-brand-300">Oyunda aktif</span>
                     ) : (
-                      <button className="text-xs text-gold-400 hover:text-gold-300" onClick={() => activate(r)}>
+                      <button className="text-xs text-brand-400 hover:text-brand-300" onClick={() => activate(r)}>
                         Bu sürüme dön
                       </button>
                     )}
@@ -177,7 +177,7 @@ export function ReleasesPage() {
                     {new Date(r.createdAt.replace(' ', 'T') + (r.createdAt.endsWith('Z') ? '' : 'Z')).toLocaleString('tr-TR')} · {r.counts.monsters} canavar · {r.counts.items} item
                   </div>
                   {r.notes && <div className="mt-1 text-xs text-slate-300">{r.notes}</div>}
-                  <a href={`/api/releases/${r.id}/bundle`} className="mt-1 inline-block text-xs text-slate-500 hover:text-gold-300">
+                  <a href={`/api/releases/${r.id}/bundle`} className="mt-1 inline-block text-xs text-slate-500 hover:text-brand-300">
                     JSON indir
                   </a>
                 </li>
