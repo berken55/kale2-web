@@ -113,4 +113,19 @@
 }
 @media(max-width:400px){.battle-facts{gap:8px}.battle-facts>span{padding:9px 12px;font-size:18px}.marketing-site .hero h1{font-size:32px}.marketing-site .hero-content>.loot-line{font-size:18px}.marketing-site .hero-bottom span{gap:8px}}
 .moba-map{margin:72px 0 0}.moba-map button{position:relative;display:block;width:100%;padding:0;overflow:hidden;border:1px solid #78b5ff66;background:#071018;cursor:zoom-in}.moba-map img{width:100%;height:auto;filter:none}
+.opening{position:relative;isolation:isolate;overflow:hidden;text-align:center;padding:96px 24px 88px;background:#04150c;color:#fff}
+.opening:before{content:'';position:absolute;inset:-45%;z-index:-2;background:repeating-conic-gradient(from 0deg at 50% 46%,rgba(46,168,78,.42) 0deg 6deg,transparent 6deg 13deg)}
+.opening:after{content:'';position:absolute;inset:0;z-index:-1;background:radial-gradient(circle at 50% 42%,rgba(16,92,42,.2),#04150c 62%)}
+.opening-badge{display:inline-block;margin:0 0 26px;padding:8px 18px;border:1px solid #3dce6a;border-radius:999px;color:#8dffb0;font:700 13px/1 'Barlow Condensed',sans-serif;letter-spacing:.2em}
+.opening h2{margin:0;font:800 clamp(52px,8.6vw,118px)/.88 'Barlow Condensed',sans-serif;letter-spacing:.01em}
+.opening h2 span{color:#2fe06a}
+.opening-status{margin:26px 0 0;color:#3dce6a;font:700 clamp(20px,2.2vw,30px)/1 'Barlow Condensed',sans-serif;letter-spacing:.46em}
+.opening-actions{display:flex;justify-content:center;gap:14px;flex-wrap:wrap;margin-top:38px}
+.opening-btn{min-height:50px;display:inline-flex;align-items:center;padding:0 22px;border-radius:10px;font:700 16px/1 'Barlow Condensed',sans-serif;letter-spacing:.08em}
+.opening-btn-solid{background:#1faa4a;color:#fff}.opening-btn-solid:hover{background:#2bc65a}
+.opening-btn-ghost{background:#101910;color:#fff;border:1px solid #21402c}.opening-btn-ghost:hover{border-color:#3dce6a}
+@media(max-width:540px){.opening{padding:72px 16px 64px}.opening-status{letter-spacing:.28em}.opening-badge{letter-spacing:.12em;font-size:12px}}
+.marketing-site .closing-section{min-height:0;background:#0c1023}
+.marketing-site .closing-section:after{content:none}
+.marketing-site .closing-content{padding:88px 0 72px}
 
