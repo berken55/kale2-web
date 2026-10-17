@@ -9,7 +9,7 @@ interface LatestBuild {
   sha256: string;
   date: string;
 }
-const FALLBACK_DOWNLOAD = '/indir/Kale2-2026.10.17-1.zip';
+const FALLBACK_DOWNLOAD = '/indir/Kale2.zip';
 const formatSize = (bytes: number) => `${Math.round(bytes / 1024 / 1024)} MB`;
 
 const regions = [
