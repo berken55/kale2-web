@@ -134,6 +134,15 @@ export const MONSTER_FLAGS = [
   { value: 'ANNOUNCE', label: 'Doğunca duyurulur' },
 ] as const satisfies readonly Option[];
 
+// ---- Spawn ----
+export const SPAWN_KINDS = [
+  { value: 'PACK', label: 'Sürü' },
+  { value: 'BOSS', label: 'Boss' },
+  { value: 'STONE', label: 'Metin taşı' },
+  { value: 'EVENT', label: 'Olay' },
+] as const satisfies readonly Option[];
+export type SpawnKind = (typeof SPAWN_KINDS)[number]['value'];
+
 export const CLASSES = [
   { value: 'WARRIOR', label: 'Savaşçı' },
   { value: 'NINJA', label: 'Ninja' },

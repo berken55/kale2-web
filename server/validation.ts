@@ -12,6 +12,7 @@ import {
   MONSTER_RANKS,
   MONSTER_RESISTS,
   RARITIES,
+  SPAWN_KINDS,
   type ItemType,
 } from '../shared/constants.ts';
 
@@ -262,3 +263,74 @@ export const simulateSchema = z.object({
   playerLevel: int(1, 250).optional(),
   seed: int(0, 2_147_483_647).optional(),
 });
+
+// ---- Haritalar ve spawn ----
+const coord = real(-100_000, 100_000);
+const lowerCode = (label: string) =>
+  z
+    .string()
+    .trim()
+    .min(1, `${label} zorunludur.`)
+    .max(40)
+    .regex(/^[a-z][a-z0-9_]*$/, `${label} küçük harfle başlamalı; yalnızca küçük harf, rakam ve alt çizgi içerebilir.`);
+
+export const mapInputSchema = z
+  .object({
+    code: lowerCode('Harita kodu'),
+    name: z.string().trim().min(1, 'İsim zorunludur.').max(80),
+    worldMinX: coord,
+    worldMinZ: coord,
+    worldMaxX: coord,
+    worldMaxZ: coord,
+  })
+  .superRefine((m, ctx) => {
+    if (m.worldMinX >= m.worldMaxX) ctx.addIssue({ code: 'custom', path: ['worldMaxX'], message: 'Max X, min X\'ten büyük olmalı.' });
+    if (m.worldMinZ >= m.worldMaxZ) ctx.addIssue({ code: 'custom', path: ['worldMaxZ'], message: 'Max Z, min Z\'den büyük olmalı.' });
+  });
+
+export const spawnEntrySchema = z
+  .object({
+    monsterId: int(1),
+    kind: z.enum(values(SPAWN_KINDS)).default('PACK'),
+    maxAlive: int(1, 100).default(1),
+    packMin: int(1, 50).default(1),
+    packMax: int(1, 50).default(1),
+    respawnMinS: int(1, 7 * 24 * 3600).default(60),
+    respawnMaxS: int(1, 7 * 24 * 3600).default(90),
+    announce: z.boolean().default(false),
+    schedule: z.string().trim().max(60).default(''),
+    leaderId: int(1).nullable().default(null),
+  })
+  .superRefine((s, ctx) => {
+    if (s.packMin > s.packMax) ctx.addIssue({ code: 'custom', path: ['packMin'], message: 'Min sürü, max sürüden büyük olamaz.' });
+    if (s.respawnMinS > s.respawnMaxS) ctx.addIssue({ code: 'custom', path: ['respawnMinS'], message: 'Min yeniden doğma süresi, maksimumdan büyük olamaz.' });
+  });
+
+export const spawnRegionSchema = z
+  .object({
+    code: lowerCode('Bölge kodu'),
+    name: z.string().trim().min(1, 'Bölge adı zorunludur.').max(80),
+    shape: z.enum(['CIRCLE', 'POLYGON']).default('CIRCLE'),
+    x: coord.default(0),
+    z: coord.default(0),
+    radius: real(0.5, 10_000).default(10),
+    points: z.array(z.tuple([coord, coord])).max(64).default([]),
+    levelMin: int(1, 250).default(1),
+    levelMax: int(1, 250).default(99),
+    spawns: z.array(spawnEntrySchema).max(30, 'Bir bölgede en fazla 30 spawn satırı olabilir.').default([]),
+  })
+  .superRefine((r, ctx) => {
+    if (r.shape === 'POLYGON' && r.points.length < 3) ctx.addIssue({ code: 'custom', path: ['points'], message: `"${r.name}" çokgeninin en az 3 köşesi olmalı.` });
+    if (r.levelMin > r.levelMax) ctx.addIssue({ code: 'custom', path: ['levelMin'], message: 'Min seviye, max seviyeden büyük olamaz.' });
+  });
+
+export const mapRegionsSchema = z
+  .object({ regions: z.array(spawnRegionSchema).max(200) })
+  .superRefine((m, ctx) => {
+    const codes = m.regions.map((r) => r.code);
+    const dupe = codes.find((c, i) => codes.indexOf(c) !== i);
+    if (dupe) ctx.addIssue({ code: 'custom', path: ['regions'], message: `"${dupe}" bölge kodu iki kez kullanılmış.` });
+  });
+
+export type MapInput = z.infer<typeof mapInputSchema>;
+export type SpawnRegionInput = z.infer<typeof spawnRegionSchema>;

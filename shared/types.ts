@@ -1,4 +1,4 @@
-import type { CharacterClass, Gender, ItemType, MonsterElement, MonsterRace, MonsterRank, Rarity } from './constants';
+import type { CharacterClass, Gender, ItemType, MonsterElement, MonsterRace, MonsterRank, Rarity, SpawnKind } from './constants';
 
 export interface BonusType {
   id: number;
@@ -330,4 +330,66 @@ export interface DropSimulationResponse {
     killsWithDrop: number;
     upgrades: Record<number, number>;
   }>;
+}
+
+// ---- Haritalar ve spawn ----
+
+
+export interface SpawnEntry {
+  monsterId: number;
+  kind: SpawnKind;
+  maxAlive: number;
+  packMin: number;
+  packMax: number;
+  respawnMinS: number;
+  respawnMaxS: number;
+  announce: boolean;
+  schedule: string;
+  leaderId: number | null;
+}
+
+export interface SpawnRegion {
+  code: string;
+  name: string;
+  shape: 'CIRCLE' | 'POLYGON';
+  x: number;
+  z: number;
+  radius: number;
+  points: Array<[number, number]>;
+  levelMin: number;
+  levelMax: number;
+  spawns: SpawnEntry[];
+}
+
+export interface GameMap {
+  id: number;
+  code: string;
+  name: string;
+  minimapUrl: string | null;
+  worldMinX: number;
+  worldMinZ: number;
+  worldMaxX: number;
+  worldMaxZ: number;
+}
+
+export interface GameMapSummary extends GameMap {
+  regionCount: number;
+  spawnCount: number;
+}
+
+/** Spawn düzenleyicide gösterilen yaratık bilgisi */
+export interface SpawnMonsterRef {
+  id: number;
+  vnum: number;
+  code: string;
+  name: string;
+  rank: string;
+  level: number;
+  exp: number;
+  iconUrl: string | null;
+}
+
+export interface GameMapDetail extends GameMap {
+  regions: SpawnRegion[];
+  monsters: Record<number, SpawnMonsterRef>;
 }

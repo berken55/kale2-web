@@ -18,6 +18,7 @@ import { logActivity, type DB } from './db.ts';
 import { dropsRouter, dropUsageOfItem } from './drops.ts';
 import { HttpError } from './http-error.ts';
 import { gameRouter, releasesRouter } from './releases.ts';
+import { mapsRouter, spawnUsageOfMonster } from './maps.ts';
 import {
   createItem,
   findBonusLimitViolation,
@@ -577,6 +578,8 @@ export function createApp({ db, uploadDir, auth, clientDir, publicWiki = true, i
     const id = idParam(req);
     const row = getMonsterRow(db, id);
     if (!row) throw new HttpError(404, 'Canavar bulunamadı.');
+    const spawns = spawnUsageOfMonster(db, id);
+    if (spawns) throw new HttpError(409, `Bu canavar ${spawns} spawn satırında kullanılıyor; önce haritalardan kaldırın.`);
     db.prepare('DELETE FROM monsters WHERE id = ?').run(id);
     removeUpload(row.icon_path);
     removeUpload(row.model_path);
@@ -587,6 +590,7 @@ export function createApp({ db, uploadDir, auth, clientDir, publicWiki = true, i
   // ---- Droplar ----
   api.use(dropsRouter(db));
   api.use(releasesRouter(db, uploadDir));
+  api.use(mapsRouter(db, uploadDir));
 
   // ---- Dışa / içe aktarma ----
   const allItems = () =>

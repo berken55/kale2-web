@@ -89,6 +89,39 @@ export interface BundleLevelDrop extends BundleDrop {
   ranks: string[];
 }
 
+export interface BundleSpawn {
+  /** Yaratığın oyun kodu ve vnum'u; seviye yaratık kaydındaki seviye */
+  monster: string;
+  vnum: number;
+  kind: 'PACK' | 'BOSS' | 'STONE' | 'EVENT';
+  max_alive: number;
+  pack: Range;
+  /** Saniye */
+  respawn: Range;
+  announce: boolean;
+  schedule: string;
+  leader: string | null;
+}
+
+export interface BundleRegion {
+  code: string;
+  name: string;
+  shape: 'CIRCLE' | 'POLYGON';
+  x: number;
+  z: number;
+  radius: number;
+  points: Array<[number, number]>;
+  level: Range;
+  spawns: BundleSpawn[];
+}
+
+export interface BundleMap {
+  name: string;
+  /** [min_x, min_z, max_x, max_z] dünya koordinatı */
+  rect: [number, number, number, number];
+  regions: BundleRegion[];
+}
+
 /** Bundle'ın içerik kısmı; sha256 bunun üzerinden hesaplanır (sürüm numarası ve tarih hariç). */
 export interface BundleContent {
   config: {
@@ -104,6 +137,8 @@ export interface BundleContent {
   monsters: BundleMonster[];
   drop_groups: Record<string, BundleDropGroup>;
   level_drops: BundleLevelDrop[];
+  /** Harita kodu (village1) → bölgeler */
+  maps: Record<string, BundleMap>;
 }
 
 export interface Bundle extends BundleContent {
@@ -121,11 +156,11 @@ export interface ReleaseSummary {
   notes: string;
   createdAt: string;
   isActive: boolean;
-  counts: { items: number; monsters: number; dropGroups: number; levelDrops: number };
+  counts: { items: number; monsters: number; dropGroups: number; levelDrops: number; maps: number; regions: number };
 }
 
 export interface ReleaseChange {
-  kind: 'item' | 'monster' | 'drop_group' | 'level_drops' | 'config';
+  kind: 'item' | 'monster' | 'drop_group' | 'level_drops' | 'config' | 'map';
   key: string;
   name: string;
   change: 'added' | 'removed' | 'changed';

@@ -36,7 +36,7 @@ describe('yayın ve oyun API', () => {
     const preview = (await agent.get('/api/releases/preview').expect(200)).body;
     expect(preview.errors).toEqual([]);
     expect(preview.activeVersion).toBeNull();
-    expect(preview.counts).toEqual({ items: 2, monsters: 1, dropGroups: 0, levelDrops: 0 });
+    expect(preview.counts).toEqual({ items: 2, monsters: 1, dropGroups: 0, levelDrops: 0, maps: 0, regions: 0 });
     expect(preview.warnings.some((w: string) => w.includes('İksir'))).toBe(true);
     expect(preview.changes).toContainEqual({ kind: 'monster', key: '102', name: 'Kurt', change: 'added' });
 

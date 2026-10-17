@@ -172,6 +172,52 @@ CREATE TABLE IF NOT EXISTS level_drops (
   CHECK (chance_ppm BETWEEN 0 AND 1000000), CHECK (count_min <= count_max), CHECK (upgrade_min <= upgrade_max)
 );
 
+-- Haritalar: minimap resmi ve kapsadığı dünya dikdörtgeni (x sağa, z aşağı; resim kuzey yukarı)
+CREATE TABLE IF NOT EXISTS maps (
+  id           INTEGER PRIMARY KEY AUTOINCREMENT,
+  code         TEXT NOT NULL UNIQUE,      -- oyundaki harita adı: village1
+  name         TEXT NOT NULL,
+  minimap_path TEXT,
+  world_min_x  REAL NOT NULL,
+  world_min_z  REAL NOT NULL,
+  world_max_x  REAL NOT NULL,
+  world_max_z  REAL NOT NULL,
+  CHECK (world_min_x < world_max_x AND world_min_z < world_max_z)
+);
+
+-- Haritada bir alan: daire ya da çokgen ("Kurt ormanı", "Metin vadisi")
+CREATE TABLE IF NOT EXISTS spawn_regions (
+  id        INTEGER PRIMARY KEY AUTOINCREMENT,
+  map_id    INTEGER NOT NULL REFERENCES maps(id) ON DELETE CASCADE,
+  code      TEXT NOT NULL,
+  name      TEXT NOT NULL,
+  shape     TEXT NOT NULL DEFAULT 'CIRCLE',   -- CIRCLE | POLYGON
+  x REAL NOT NULL DEFAULT 0, z REAL NOT NULL DEFAULT 0, radius REAL NOT NULL DEFAULT 10,
+  points    TEXT NOT NULL DEFAULT '[]',       -- POLYGON: [[x,z],...]
+  level_min INTEGER NOT NULL DEFAULT 1,
+  level_max INTEGER NOT NULL DEFAULT 99,
+  sort      INTEGER NOT NULL DEFAULT 0,
+  UNIQUE (map_id, code)
+);
+
+-- Bölgede ne doğar
+CREATE TABLE IF NOT EXISTS spawn_entries (
+  id            INTEGER PRIMARY KEY AUTOINCREMENT,
+  region_id     INTEGER NOT NULL REFERENCES spawn_regions(id) ON DELETE CASCADE,
+  monster_id    INTEGER NOT NULL REFERENCES monsters(id),
+  kind          TEXT NOT NULL DEFAULT 'PACK',   -- PACK: sürekli sürüler | STONE: Metin taşı | BOSS | EVENT
+  max_alive     INTEGER NOT NULL DEFAULT 1,     -- bölgede aynı anda en fazla kaç grup
+  pack_min      INTEGER NOT NULL DEFAULT 1,
+  pack_max      INTEGER NOT NULL DEFAULT 1,
+  respawn_min_s INTEGER NOT NULL DEFAULT 60,
+  respawn_max_s INTEGER NOT NULL DEFAULT 90,
+  announce      INTEGER NOT NULL DEFAULT 0,
+  schedule      TEXT NOT NULL DEFAULT '',       -- EVENT için: "daily 20:00", "every 2h", "night"
+  leader_id     INTEGER REFERENCES monsters(id),
+  sort          INTEGER NOT NULL DEFAULT 0,
+  CHECK (pack_min <= pack_max), CHECK (respawn_min_s <= respawn_max_s), CHECK (max_alive >= 1)
+);
+
 -- Oyun ayarları (anahtar → JSON değer); bundle'ın config kısmına gider
 CREATE TABLE IF NOT EXISTS game_config (
   key   TEXT PRIMARY KEY,

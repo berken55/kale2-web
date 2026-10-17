@@ -9,6 +9,7 @@ const KIND_LABEL: Record<ReleaseChange['kind'], string> = {
   drop_group: 'Drop grubu',
   level_drops: 'Genel drop',
   config: 'Ayar',
+  map: 'Harita',
 };
 const CHANGE_STYLE: Record<ReleaseChange['change'], [string, string]> = {
   added: ['Yeni', 'bg-emerald-500/10 text-emerald-300'],
@@ -80,7 +81,7 @@ export function ReleasesPage() {
             <h2 className="font-display text-gold-300">Yayınlanacaklar</h2>
             {preview && (
               <span className="text-xs text-slate-500">
-                {preview.counts.monsters} canavar · {preview.counts.items} item · {preview.counts.dropGroups} drop grubu · {preview.counts.levelDrops} genel drop
+                {preview.counts.monsters} canavar · {preview.counts.items} item · {preview.counts.dropGroups} drop grubu · {preview.counts.levelDrops} genel drop · {preview.counts.regions} spawn bölgesi
                 {preview.activeVersion ? ` · aktif: v${preview.activeVersion}` : ' · henüz yayın yok'}
               </span>
             )}

@@ -21,6 +21,7 @@ import { DEFAULT_LEVEL_PENALTY } from '../shared/drops.ts';
 import { logActivity, type DB } from './db.ts';
 import { getMonsterDrops, listLevelDrops } from './drops.ts';
 import { HttpError } from './http-error.ts';
+import { getRegions, listMapRows } from './maps.ts';
 import type { MonsterRow } from './monsters.ts';
 
 export function getGameConfig(db: DB): GameConfig {
@@ -140,10 +141,51 @@ export function buildContent(db: DB, uploadDir: string) {
     ranks: d.ranks,
   }));
 
+  const monsterById = new Map(
+    (db.prepare('SELECT id, code, vnum, name, level FROM monsters').all() as Array<{ id: number; code: string; vnum: number; name: string; level: number }>).map((m) => [m.id, m]),
+  );
+  const maps: BundleContent['maps'] = {};
+  for (const map of listMapRows(db)) {
+    const inside = (x: number, z: number) => x >= map.world_min_x && x <= map.world_max_x && z >= map.world_min_z && z <= map.world_max_z;
+    const regions = getRegions(db, map.id).map((r) => {
+      const pts = r.shape === 'CIRCLE' ? [[r.x, r.z]] : r.points;
+      if (pts.some(([x, z]) => !inside(x, z))) warnings.push(`${map.name} / ${r.name}: bölge harita sınırlarının dışına taşıyor.`);
+      if (!r.spawns.length) warnings.push(`${map.name} / ${r.name}: bölgede spawn yok.`);
+      return {
+        code: r.code,
+        name: r.name,
+        shape: r.shape,
+        x: r.x,
+        z: r.z,
+        radius: r.radius,
+        points: r.points,
+        level: [r.levelMin, r.levelMax] as [number, number],
+        spawns: r.spawns.map((s) => {
+          const m = monsterById.get(s.monsterId)!;
+          if (m.level < r.levelMin || m.level > r.levelMax) warnings.push(`${map.name} / ${r.name}: ${m.name} (Sv. ${m.level}) bölgenin seviye aralığı (${r.levelMin}–${r.levelMax}) dışında.`);
+          if (s.kind === 'STONE' || s.kind === 'EVENT') warnings.push(`${map.name} / ${r.name}: ${m.name} "${s.kind === 'STONE' ? 'Metin taşı' : 'olay'}" türünde; oyun bunları henüz doğurmuyor (5. adım).`);
+          return {
+            monster: m.code,
+            vnum: m.vnum,
+            kind: s.kind,
+            max_alive: s.maxAlive,
+            pack: [s.packMin, s.packMax] as [number, number],
+            respawn: [s.respawnMinS, s.respawnMaxS] as [number, number],
+            announce: s.announce,
+            schedule: s.schedule,
+            leader: s.leaderId ? (monsterById.get(s.leaderId)?.code ?? null) : null,
+          };
+        }),
+      };
+    });
+    if (!map.minimap_path) warnings.push(`${map.name} haritasının minimap resmi yok.`);
+    maps[map.code] = { name: map.name, rect: [map.world_min_x, map.world_min_z, map.world_max_x, map.world_max_z], regions };
+  }
+
   for (const f of missingFiles) errors.push(`Yüklenmiş dosya diskte yok: ${f}`);
   for (const n of noCode) warnings.push(`Oyun kodu olmayan item dropta: ${n}. Oyunda düşmez; itemin "Oyun kodu" alanını doldurun.`);
 
-  const content: BundleContent = { config: { ...getGameConfig(db), drop_level_penalty: [...DEFAULT_LEVEL_PENALTY] }, items, monsters, drop_groups, level_drops };
+  const content: BundleContent = { config: { ...getGameConfig(db), drop_level_penalty: [...DEFAULT_LEVEL_PENALTY] }, items, monsters, drop_groups, level_drops, maps };
   return { content, sha256: sha(JSON.stringify(content)), errors, warnings };
 }
 
@@ -152,6 +194,8 @@ const countsOf = (c: BundleContent) => ({
   monsters: c.monsters.length,
   dropGroups: Object.keys(c.drop_groups).length,
   levelDrops: c.level_drops.length,
+  maps: Object.keys(c.maps ?? {}).length,
+  regions: Object.values(c.maps ?? {}).reduce((n, m) => n + m.regions.length, 0),
 });
 
 /** Aktif sürümden bu yana ne değişti (item/yaratık vnum'a, grup koda göre). */
@@ -169,6 +213,7 @@ export function diffContent(prev: BundleContent | null, next: BundleContent): Re
   compare('monster', byVnum(prev?.monsters), byVnum(next.monsters));
   compare('item', byVnum(prev?.items), byVnum(next.items));
   compare('drop_group', new Map(Object.entries(prev?.drop_groups ?? {})), new Map(Object.entries(next.drop_groups)));
+  compare('map', new Map(Object.entries(prev?.maps ?? {})), new Map(Object.entries(next.maps)));
   if (JSON.stringify(prev?.level_drops ?? []) !== JSON.stringify(next.level_drops)) {
     out.push({ kind: 'level_drops', key: 'level_drops', name: 'Genel drop tablosu', change: prev ? 'changed' : 'added' });
   }
