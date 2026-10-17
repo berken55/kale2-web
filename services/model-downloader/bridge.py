@@ -10,6 +10,8 @@ import sys
 from pathlib import Path
 from urllib.parse import urljoin, urlparse, urlencode
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
 from curl_cffi import requests
 from PIL import Image
 import download

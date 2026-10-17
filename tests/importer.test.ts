@@ -88,6 +88,12 @@ describe('içe aktarma uç noktaları', () => {
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 
+  it('m2icondb item linkini eşya içe aktarmada reddeder', async () => {
+    const { agent } = await setup();
+    const res = await agent.post('/api/import/url').send({ url: 'https://m2icondb.com/item/11210' }).expect(400);
+    expect(res.body.error).toContain('Metin2Alerts');
+  });
+
   it('sayfayı okuyup taslak döndürür, izinsiz adrese yönlendirmeyi takip etmez', async () => {
     const { agent } = await setup();
     vi.stubGlobal('fetch', vi.fn(async () => new Response(FIXTURE, { headers: { 'content-type': 'text/html' } })));
@@ -103,6 +109,7 @@ describe('içe aktarma uç noktaları', () => {
     const { agent, uploadDir } = await setup();
     vi.stubGlobal('fetch', vi.fn(async () => new Response(FIXTURE, { headers: { 'content-type': 'text/html' } })));
     const draft = (await agent.post('/api/import/url').send({ url: URL_ }).expect(200)).body;
+    expect(draft.assets.modelUrl).toBeNull();
     const item = (await agent.post('/api/items').send(draft.item).expect(201)).body;
     expect(item.sourceUrl).toBe(URL_);
 
@@ -113,7 +120,7 @@ describe('içe aktarma uç noktaları', () => {
     ));
     const withIcon = (await agent.post(`/api/items/${item.id}/remote-media`).send({ kind: 'icon', url: draft.assets.iconUrl }).expect(200)).body;
     expect(withIcon.iconUrl).toMatch(/^\/uploads\/icons\/.+\.png$/);
-    const withModel = (await agent.post(`/api/items/${item.id}/remote-media`).send({ kind: 'model', url: draft.assets.modelUrl }).expect(200)).body;
+    const withModel = (await agent.post(`/api/items/${item.id}/remote-media`).send({ kind: 'model', url: 'https://metin2alerts.com/models/poison_sword.glb' }).expect(200)).body;
     expect(withModel.modelFileName).toBe('poison_sword.glb');
     expect(fs.existsSync(path.join(uploadDir, withModel.modelUrl.replace('/uploads/', '')))).toBe(true);
 

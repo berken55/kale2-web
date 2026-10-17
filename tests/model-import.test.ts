@@ -7,7 +7,7 @@ import { createApp } from '../server/app.ts';
 import { openDatabase } from '../server/db.ts';
 import { metin2alerts } from '../server/importers/metin2alerts.ts';
 import { monsters } from '../server/importers/monsters.ts';
-import { m2icondb } from '../server/importers/m2icondb.ts';
+import { applyCatalogRecord, m2icondb } from '../server/importers/m2icondb.ts';
 import * as service from '../server/importers/model-service.ts';
 import { FetchError } from '../server/importers/fetch.ts';
 import { convertLegacyMonster } from '../server/monster-convert.ts';
@@ -99,6 +99,9 @@ describe('model import service', () => {
 
   it('recognizes supported URLs and rejects unsafe model sources', () => {
     expect(m2icondb.parse('', 'https://m2icondb.com/3d?glb=weapons/10.glb&type=WEAPON&subtype=WEAPON_DAGGER&value3=10')).toMatchObject({ vnum: 10, type: 'WEAPON', subtype: 'DAGGER' });
+    const armor = m2icondb.parse('', 'https://m2icondb.com/item/11210');
+    applyCatalogRecord(armor, { name: 'Iron Plate Armour+0', type: 'ITEM_ARMOR', subtype: 'ARMOR_BODY', level: '9', warrior: true, assassin: false, bonuses: [{ t: 'Defence 21', k: 'def' }, { t: 'Movement Speed -2%', k: 'neg' }] });
+    expect(armor).toMatchObject({ name: 'Iron Plate Armour+0', type: 'ARMOR', subtype: 'BODY', levelRequired: 9, classes: ['WARRIOR'], stats: { defense: 21 }, bonuses: [{ label: 'Movement Speed', value: -2, unit: '%' }] });
     expect(service.isModelSource('https://m2icondb.com/item/10')).toBe(true);
     expect(service.isModelSource(mobUrl)).toBe(true);
     expect(service.isModelSource('https://m2icondb.com.evil.test/item/10')).toBe(false);

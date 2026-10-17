@@ -3,8 +3,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { CLASSES, ITEM_SUBTYPES, ITEM_TYPES, RARITIES, labelOf, subtypeLabel, type ItemType } from '@shared/constants';
 import type { Item, ItemListResponse } from '@shared/types';
 import { api } from '../api';
-import { ImportDialog, type ImportResult } from '../components/ImportDialog';
-import type { ImportState } from './ItemEditor';
+import { ImportDialog } from '../components/ImportDialog';
 import { EmptyState, ItemIcon, PageHeader, RarityBadge, Spinner, useConfirm, useToast } from '../components/ui';
 
 const PAGE_SIZE = 25;
@@ -19,12 +18,6 @@ export function ItemListPage() {
   const confirm = useConfirm();
   const navigate = useNavigate();
   const [importOpen, setImportOpen] = useState(false);
-
-  const openImported = (r: ImportResult & { target: 'new' | 'existing' }) => {
-    const state: ImportState = { importDraft: r.draft, importAssets: r.assets };
-    setImportOpen(false);
-    navigate(r.target === 'existing' && r.draft.existingItemId ? `/admin/items/${r.draft.existingItemId}` : '/admin/items/new', { state });
-  };
 
   const type = params.get('type') ?? '';
   const page = Number(params.get('page') ?? 1);
@@ -100,7 +93,7 @@ export function ItemListPage() {
           </>
         }
       />
-      <ImportDialog open={importOpen} onClose={() => setImportOpen(false)} onConfirm={openImported} />
+      <ImportDialog open={importOpen} onClose={() => setImportOpen(false)} onSaved={() => setReload((r) => r + 1)} />
 
       <div className="card mb-4 grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-6">
         <input

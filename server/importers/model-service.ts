@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { FetchError, isAllowedUrl } from './fetch.ts';
 
 const worker = fileURLToPath(new URL('../../services/model-downloader/bridge.py', import.meta.url));
+const workerDir = path.dirname(worker);
 const supported = new Set(['metin2alerts.com', 'www.metin2alerts.com', 'm2icondb.com', 'www.m2icondb.com']);
 let active = 0;
 
@@ -22,8 +23,14 @@ export function runWorker<T>(body: Record<string, unknown>): Promise<T> {
   if (active >= 2) return Promise.reject(new FetchError('İndirme servisi meşgul; biraz sonra tekrar deneyin.', 429));
   active++;
   return new Promise((resolve, reject) => {
-    const child = execFile(process.env.MODEL_DOWNLOADER_PYTHON || (process.platform === 'win32' ? 'python' : 'python3'),
-      [worker], { timeout: 180_000, maxBuffer: 12 * 1024 * 1024, windowsHide: true, encoding: 'utf8' }, (error, stdout) => {
+    const python = process.env.MODEL_DOWNLOADER_PYTHON || (process.platform === 'win32' ? 'python' : 'python3');
+    const child = execFile(python, [worker], {
+      cwd: workerDir,
+      timeout: 180_000,
+      maxBuffer: 12 * 1024 * 1024,
+      windowsHide: true,
+      encoding: 'utf8',
+    }, (error, stdout, stderr) => {
         active--;
         try {
           const result = JSON.parse(stdout) as T & { error?: string };
@@ -31,7 +38,13 @@ export function runWorker<T>(body: Record<string, unknown>): Promise<T> {
           else if (error) reject(new FetchError('İndirme servisi tamamlanamadı.', 502));
           else resolve(result);
         } catch {
-          reject(new FetchError('İndirme servisi çalıştırılamadı. Python ortamını kontrol edin.', 502));
+          const detail = (stderr || stdout || error?.message || '').trim().split('\n').slice(-3).join(' ');
+          reject(new FetchError(
+            detail
+              ? `İndirme servisi çalıştırılamadı: ${detail.slice(0, 240)}`
+              : 'İndirme servisi çalıştırılamadı. Python 3.10+ kurulu olduğundan ve services/model-downloader/requirements.txt yüklendiğinden emin olun (MODEL_DOWNLOADER_PYTHON).',
+            502,
+          ));
         }
       });
     child.stdin?.on('error', () => {});

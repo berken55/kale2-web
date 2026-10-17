@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { CLASSES, ITEM_SUBTYPES, ITEM_TYPES, labelOf, type ItemType } from '@shared/constants';
-import type { ImportDraft, Item } from '@shared/types';
+import type { ImportDraft, Item, ItemStats } from '@shared/types';
 import { api, uploadFile } from '../api';
 import { Spinner, useToast } from './ui';
 
@@ -24,20 +24,34 @@ const FOUND_LABELS: Record<string, string> = {
   bonuses: 'Bonuslar',
 };
 
+const showsAttack = (type: string) => type === 'WEAPON';
+const showsDefense = (type: string) => ['ARMOR', 'BELT', 'COSTUME'].includes(type);
+const isEquipment = (type: string) => ['WEAPON', 'ARMOR', 'BELT', 'COSTUME'].includes(type);
+
+function normalizeImportItem(item: ImportDraft['item']): ImportDraft['item'] {
+  const stats: ItemStats = { ...item.stats };
+  if (!showsAttack(item.type)) Object.assign(stats, { minAttack: 0, maxAttack: 0, minMagicAttack: 0, maxMagicAttack: 0, attackSpeed: 0 });
+  if (!showsDefense(item.type)) stats.defense = 0;
+  return { ...item, stats, stackSize: isEquipment(item.type) ? 1 : item.stackSize };
+}
+
 /**
- * Harici bir item sayfasının linkini alır, sunucuda okutur ve sonucu önizletir.
- * Hiçbir şey otomatik kaydedilmez; onaylanan taslak düzenleyicide açılır.
+ * Metin2Alerts item linkini okutur. Liste modunda doğrudan kaydeder; düzenleyicide "kaynak güncelle" forma uygular.
  */
 export function ImportDialog({
   open,
   onClose,
   onConfirm,
+  onSaved,
   initialUrl = '',
   refreshOf,
 }: {
   open: boolean;
   onClose: () => void;
-  onConfirm: (result: ImportResult & { target: 'new' | 'existing' }) => void;
+  /** Düzenleyicide kaynaktan güncelle: forma uygula */
+  onConfirm?: (result: ImportResult & { target: 'new' | 'existing' }) => void;
+  /** Liste modunda kayıt tamamlanınca */
+  onSaved?: () => void;
   initialUrl?: string;
   /** "Kaynaktan güncelle" modunda güncellenecek item */
   refreshOf?: Item;
@@ -48,10 +62,10 @@ export function ImportDialog({
   const [cookieBusy, setCookieBusy] = useState(false);
   const [url, setUrl] = useState(initialUrl);
   const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [draft, setDraft] = useState<ImportDraft | null>(null);
   const [useIcon, setUseIcon] = useState(true);
-  const [useModel, setUseModel] = useState(true);
   const [target, setTarget] = useState<'new' | 'existing'>('existing');
   const [materials, setMaterials] = useState<{ running: boolean; done: number; failed: string[] } | null>(null);
 
@@ -82,7 +96,6 @@ export function ImportDialog({
       const d = await api.post<ImportDraft>('/api/import/url', { url: u, ...(requestedVnum ? { vnum: Number(requestedVnum) } : {}) });
       setDraft(d);
       setUseIcon(!!d.assets.iconUrl);
-      setUseModel(!!d.assets.modelUrl);
       setTarget(d.existingItemId ? 'existing' : 'new');
     } catch (e) {
       setError((e as Error).message);
@@ -123,18 +136,58 @@ export function ImportDialog({
     if (!failed.length) toast('success', `${list.length} malzeme oluşturuldu.`);
   };
 
-  const confirm = async () => {
+  const saveDirect = async () => {
     if (!draft) return;
-    let item = draft.item;
-    if (!refreshOf && target === 'new' && draft.existingItemId) {
-      const { vnum } = await api.get<{ vnum: number }>('/api/items/next-vnum');
-      item = { ...item, vnum };
+    setSaving(true);
+    setError('');
+    try {
+      let item = normalizeImportItem(draft.item);
+      const updateId = refreshOf?.id ?? (target === 'existing' ? draft.existingItemId : null);
+      if (!refreshOf && target === 'new' && draft.existingItemId) {
+        const { vnum } = await api.get<{ vnum: number }>('/api/items/next-vnum');
+        item = { ...item, vnum };
+      }
+      let saved = updateId ? await api.put<Item>(`/api/items/${updateId}`, item) : await api.post<Item>('/api/items', item);
+      if (useIcon && draft.assets.iconUrl) {
+        try {
+          saved = await api.post<Item>(`/api/items/${saved.id}/remote-media`, { kind: 'icon', url: draft.assets.iconUrl });
+          toast('success', 'İkon kaynaktan indirildi.');
+        } catch (e) {
+          toast('error', `İkon indirilemedi: ${(e as Error).message}`);
+        }
+      }
+      toast('success', updateId ? 'Item güncellendi.' : 'Item kaydedildi.');
+      onSaved?.();
+      onClose();
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setSaving(false);
     }
-    onConfirm({
-      draft: { ...draft, item },
-      assets: { iconUrl: useIcon ? draft.assets.iconUrl : null, modelUrl: useModel ? draft.assets.modelUrl : null },
-      target: refreshOf ? 'existing' : target,
-    });
+  };
+
+  const confirm = () => {
+    if (!draft) return;
+    if (refreshOf && onConfirm) {
+      let item = draft.item;
+      if (target === 'new' && draft.existingItemId) {
+        void api.get<{ vnum: number }>('/api/items/next-vnum').then(({ vnum }) => {
+          onConfirm({
+            draft: { ...draft, item: { ...item, vnum } },
+            assets: { iconUrl: useIcon ? draft.assets.iconUrl : null, modelUrl: null },
+            target: 'existing',
+          });
+        });
+        return;
+      }
+      onConfirm({
+        draft: { ...draft, item },
+        assets: { iconUrl: useIcon ? draft.assets.iconUrl : null, modelUrl: null },
+        target: refreshOf ? 'existing' : target,
+      });
+      return;
+    }
+    void saveDirect();
   };
 
   if (!open) return null;
@@ -148,7 +201,9 @@ export function ImportDialog({
           {refreshOf ? 'Kaynaktan güncelle' : 'Linkten içe aktar'}
         </h2>
         <p className="mt-1 text-sm text-slate-400">
-          Metin2Alerts eşya / canavar / NPC veya m2icondb eşya / canavar / 3D bağlantısını yapıştırın. Özellikleri kontrol edip kaydedin; model ve dokular kayıt sırasında indirilir.
+          {refreshOf
+            ? 'Metin2Alerts item sayfasından güncel verileri okuyup forma uygular. 3D için Medya sekmesinde m2icondb item linki kullanın.'
+            : 'Metin2Alerts item sayfası linkini yapıştırın; getirince doğrudan kaydedilir (ikon Metin2Alerts’ten). Zırh vb. için 3D modeli sonra Medya sekmesinden m2icondb linki ile ekleyin.'}
         </p>
 
         <form onSubmit={submit} className="mt-4 flex gap-2">
@@ -188,7 +243,7 @@ export function ImportDialog({
             try { await api.del('/api/import/cookies'); setCookieConfigured(false); }
             catch (error) { setError((error as Error).message); }
           }}>Çerezi sil</button>}
-          <span>m2icondb modelleri için çerez gerekmez.</span>
+          {!refreshOf && <span>3D model bu adımda indirilmez; m2icondb için çerez gerekmez.</span>}
         </div>
         {error && <p className="mt-3 rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-300">{error}</p>}
 
@@ -293,22 +348,11 @@ export function ImportDialog({
               </div>
             )}
 
-            {(draft.assets.iconUrl || draft.assets.modelUrl) && (
-              <div className="space-y-2 text-sm">
-                <div className="text-slate-300">Kaydettikten sonra kaynaktan indirilecek dosyalar:</div>
-                {draft.assets.iconUrl && (
-                  <label className="flex items-center gap-2 text-slate-300">
-                    <input type="checkbox" className="h-4 w-4 accent-brand-500" checked={useIcon} onChange={(e) => setUseIcon(e.target.checked)} />
-                    İkon
-                  </label>
-                )}
-                {draft.assets.modelUrl && (
-                  <label className="flex items-center gap-2 text-slate-300">
-                    <input type="checkbox" className="h-4 w-4 accent-brand-500" checked={useModel} onChange={(e) => setUseModel(e.target.checked)} />
-                    3D model <span className="truncate text-xs text-slate-500">({decodeURIComponent(draft.assets.modelUrl.split('/').pop() ?? '')})</span>
-                  </label>
-                )}
-              </div>
+            {draft.assets.iconUrl && (
+              <label className="flex items-center gap-2 text-sm text-slate-300">
+                <input type="checkbox" className="h-4 w-4 accent-brand-500" checked={useIcon} onChange={(e) => setUseIcon(e.target.checked)} />
+                Metin2Alerts ikonunu kayıt sırasında indir
+              </label>
             )}
 
             {!refreshOf && draft.existingItemId && (
@@ -316,7 +360,7 @@ export function ImportDialog({
                 <legend className="px-1 text-brand-300">#{it.vnum} vnum'lu item panelde zaten var</legend>
                 <label className="flex items-center gap-2 text-slate-300">
                   <input type="radio" name="target" className="accent-brand-500" checked={target === 'existing'} onChange={() => setTarget('existing')} />
-                  Mevcut itemi bu verilerle güncelle (kaydetmeden önce düzenleyicide görürsünüz)
+                  Mevcut itemi bu verilerle güncelle
                 </label>
                 <label className="flex items-center gap-2 text-slate-300">
                   <input type="radio" name="target" className="accent-brand-500" checked={target === 'new'} onChange={() => setTarget('new')} />
@@ -328,11 +372,12 @@ export function ImportDialog({
         )}
 
         <div className="mt-6 flex justify-end gap-2">
-          <button type="button" className="btn-ghost" onClick={onClose} disabled={loading}>
+          <button type="button" className="btn-ghost" onClick={onClose} disabled={loading || saving}>
             Vazgeç
           </button>
-          <button type="button" className="btn-primary" disabled={!draft || loading || materials?.running} onClick={confirm}>
-            Düzenleyicide aç
+          <button type="button" className="btn-primary" disabled={!draft || loading || saving || materials?.running} onClick={confirm}>
+            {(loading || saving) && <Spinner />}
+            {refreshOf ? 'Forma uygula' : 'Kaydet'}
           </button>
         </div>
       </div>

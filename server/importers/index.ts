@@ -5,7 +5,7 @@ import { uniqueMonsterCode } from '../monsters.ts';
 import type { DB } from '../db.ts';
 import { FetchError, isAllowedUrl, safeFetch } from './fetch.ts';
 import { metin2alerts } from './metin2alerts.ts';
-import { m2icondb } from './m2icondb.ts';
+import { applyCatalogRecord, m2icondb } from './m2icondb.ts';
 import { monsters } from './monsters.ts';
 import { protectedPage, runWorker } from './model-service.ts';
 import type { RawItem, SiteImporter } from './types.ts';
@@ -250,14 +250,25 @@ async function fetchRaw(rawUrl: string, options: ImportOptions): Promise<{ url: 
   } else if (importer === m2icondb) {
     raw = m2icondb.parse('', url);
     raw.vnum = options.vnum ?? raw.vnum;
+    if (raw.vnum && !new URL(url).pathname.startsWith('/monster/')) {
+      try {
+        const page = await safeFetch('https://m2icondb.com/locales/en/translation.json', { maxBytes: 25 * 1024 * 1024, accept: 'application/json' });
+        const catalog = JSON.parse(page.body.toString('utf8')) as Record<string, unknown>;
+        const record = catalog[String(raw.vnum).padStart(5, '0')] ?? catalog[String(raw.vnum)];
+        if (record && typeof record === 'object') applyCatalogRecord(raw, record as Record<string, unknown>);
+      } catch {
+        raw.warnings = [...(raw.warnings ?? []), 'm2icondb kataloğu okunamadı; yalnızca bağlantıdaki bilgiler kullanıldı.'];
+      }
+    }
     if (raw.vnum) {
       const metadataUrl = `https://metin2alerts.com/en/wiki/${raw.type === 'MONSTER' ? 'mob' : 'item'}/${raw.vnum}`;
+      const catalogFound = new Set(raw.found);
       try {
         const html = await protectedPage(metadataUrl, options.cookieFile);
         const metadata = (raw.type === 'MONSTER' ? monsters : metin2alerts).parse(html, metadataUrl);
         raw = { ...metadata, modelUrl: url };
       } catch {
-        raw.found = raw.found.filter((f) => f !== 'stats');
+        if (!catalogFound.has('stats')) raw.found = raw.found.filter((f) => f !== 'stats');
       }
     }
   } else {
@@ -275,9 +286,6 @@ async function fetchRaw(rawUrl: string, options: ImportOptions): Promise<{ url: 
   }
   raw.vnum = options.vnum ?? raw.vnum;
   if (!raw.vnum) throw new FetchError('Bu 3D bağlantısında Vnum yok. Vnum alanını doldurup yeniden getirin.');
-  if (importer === metin2alerts && !raw.modelUrl && guessType(raw.name ?? '', raw.categoryText)?.type === 'WEAPON') {
-    raw.modelUrl = `https://m2icondb.com/item/${raw.vnum}`;
-  }
   return { url, importer, raw };
 }
 
@@ -292,11 +300,27 @@ const sourceWarning = (importer: SiteImporter, url: string, raw: RawItem) =>
 
 /** Item sayfasının linkinden düzenlenebilir bir item taslağı döndürür. Hiçbir şey kaydedilmez. */
 export async function importFromUrl(db: DB, rawUrl: string, typeOverride?: { type: string; subtype: string }, options: ImportOptions = {}): Promise<ImportDraft> {
-  const { url, importer, raw } = await fetchRaw(rawUrl, options);
+  let url: string;
+  try {
+    url = new URL(rawUrl.trim()).toString();
+  } catch {
+    throw new FetchError('Geçerli bir link girin.');
+  }
+  const site = findImporter(url);
+  if (site?.id === 'm2icondb' && !new URL(url).pathname.startsWith('/monster/')) {
+    throw new FetchError(
+      'Eşya bilgileri için Metin2Alerts bağlantısı kullanın. 3D model için item kaydedildikten sonra Medya sekmesinde m2icondb item linki verin (ör. https://m2icondb.com/item/11210).',
+    );
+  }
+  const { url: fetchedUrl, importer, raw } = await fetchRaw(rawUrl, options);
   if (raw.type === 'MONSTER') throw new FetchError('Bu bir canavar sayfası. Canavarlar sayfasındaki "Linkten içe aktar" ile ekleyin.');
-  const draft = buildDraft(db, raw, url, importer, typeOverride);
-  const warning = sourceWarning(importer, url, raw);
+  const draft = buildDraft(db, raw, fetchedUrl, importer, typeOverride);
+  if (importer.id === 'metin2alerts') draft.assets.modelUrl = null;
+  const warning = sourceWarning(importer, fetchedUrl, raw);
   if (warning) draft.warnings.push(warning);
+  if (['WEAPON', 'ARMOR', 'COSTUME'].includes(draft.item.type)) {
+    draft.warnings.push('3D model içe aktarmada indirilmez; Medya sekmesinden m2icondb item linki ile ekleyebilirsiniz.');
+  }
   return draft;
 }
 

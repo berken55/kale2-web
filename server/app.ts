@@ -35,6 +35,7 @@ import {
 import { allowedHosts, FetchError, safeFetch } from './importers/fetch.ts';
 import { IMPORTERS, importFromUrl, importMonsterFromUrl } from './importers/index.ts';
 import { downloadModel, isModelSource, protectedIcon } from './importers/model-service.ts';
+import { resolveRemoteMediaUrl } from './importers/remote-media.ts';
 import {
   getMonster,
   getMonsterRow,
@@ -469,7 +470,8 @@ export function createApp({ db, uploadDir, auth, clientDir, publicWiki = true, i
     api.post(`/${e.route}/:id/remote-media`, (req, res, next) => {
       const id = idParam(req);
       if (!e.getRow(id)) throw new HttpError(404, e.notFound);
-      const { kind, url } = z.object({ kind: z.enum(['icon', 'model']), url: z.string().url().max(2000) }).parse(req.body);
+      const { kind, url: rawUrl } = z.object({ kind: z.enum(['icon', 'model']), url: z.string().url().max(2000) }).parse(req.body);
+      const url = resolveRemoteMediaUrl(kind, rawUrl);
       const exts: readonly string[] = kind === 'icon' ? ICON_EXTENSIONS : MODEL_EXTENSIONS;
       (async () => {
         if (kind === 'model' && isModelSource(url)) {

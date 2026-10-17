@@ -990,6 +990,8 @@ export function MediaTab<T extends MediaOwner>({ item, onChange, base = '/api/it
   const confirm = useConfirm();
   const [busy, setBusy] = useState<'icon' | 'model' | null>(null);
   const [progress, setProgress] = useState(0);
+  const [remoteIcon, setRemoteIcon] = useState('');
+  const [remoteModel, setRemoteModel] = useState('');
 
   const upload = async (kind: 'icon' | 'model', file: File) => {
     const exts = kind === 'icon' ? ICON_EXTENSIONS : MODEL_EXTENSIONS;
@@ -1003,6 +1005,24 @@ export function MediaTab<T extends MediaOwner>({ item, onChange, base = '/api/it
       const updated = await uploadFile<T>(`${base}/${item.id}/${kind}`, file, setProgress);
       onChange(updated);
       toast('success', kind === 'icon' ? 'İkon yüklendi.' : '3D model yüklendi.');
+    } catch (e) {
+      toast('error', (e as Error).message);
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const fetchRemote = async (kind: 'icon' | 'model', url: string) => {
+    const trimmed = url.trim();
+    if (!trimmed) return toast('error', 'Bir link girin.');
+    setBusy(kind);
+    try {
+      const updated = await api.post<T & { importWarnings?: string[] }>(`${base}/${item.id}/remote-media`, { kind, url: trimmed });
+      for (const warning of updated.importWarnings ?? []) toast('error', warning);
+      onChange(updated);
+      toast('success', kind === 'icon' ? 'İkon linkten indirildi.' : '3D model linkten indirildi.');
+      if (kind === 'icon') setRemoteIcon('');
+      else setRemoteModel('');
     } catch (e) {
       toast('error', (e as Error).message);
     } finally {
@@ -1040,6 +1060,18 @@ export function MediaTab<T extends MediaOwner>({ item, onChange, base = '/api/it
                 İkonu kaldır
               </button>
             )}
+            <div className="mt-4 flex flex-wrap gap-2">
+              <input
+                className="input min-w-[200px] flex-1 text-sm"
+                placeholder="Metin2Alerts ikon veya m2icondb item linki"
+                value={remoteIcon}
+                onChange={(e) => setRemoteIcon(e.target.value)}
+                disabled={busy === 'icon'}
+              />
+              <button type="button" className="btn-ghost btn-sm shrink-0" disabled={busy === 'icon' || !remoteIcon.trim()} onClick={() => fetchRemote('icon', remoteIcon)}>
+                {busy === 'icon' && <Spinner />} Linkten indir
+              </button>
+            </div>
           </div>
         </div>
       </section>
@@ -1076,6 +1108,19 @@ export function MediaTab<T extends MediaOwner>({ item, onChange, base = '/api/it
           busy={busy === 'model'}
           progress={progress}
         />
+        <div className="mt-4 flex flex-wrap gap-2">
+          <input
+            className="input min-w-[200px] flex-1 text-sm"
+            placeholder="https://m2icondb.com/item/11210"
+            value={remoteModel}
+            onChange={(e) => setRemoteModel(e.target.value)}
+            disabled={busy === 'model'}
+          />
+          <button type="button" className="btn-ghost btn-sm shrink-0" disabled={busy === 'model' || !remoteModel.trim()} onClick={() => fetchRemote('model', remoteModel)}>
+            {busy === 'model' && <Spinner />} m2icondb linkinden indir
+          </button>
+        </div>
+        <p className="mt-2 text-xs text-slate-500">Zırh ve kostüm gibi eşyalarda 3D genelde yalnızca m2icondb item sayfasında vardır; Metin2Alerts içe aktarması model indirmez.</p>
       </section>
     </div>
   );
