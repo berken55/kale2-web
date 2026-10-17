@@ -1,8 +1,16 @@
 import { useEffect, useRef, useState, type KeyboardEvent, type MouseEvent } from 'react';
 import '../marketing.css';
 
-const DOWNLOAD_URL = 'https://drive.google.com/uc?export=download&id=1PhmeprIo1EUMV071DlRbUJwm445Z_Vq6';
-const DRIVE_URL = 'https://drive.google.com/file/d/1PhmeprIo1EUMV071DlRbUJwm445Z_Vq6/view?usp=drive_link';
+/** Sunucudaki son sürüm: /indir/latest.json (deploy/nginx.conf). Okunamazsa sabit adres. */
+interface LatestBuild {
+  version: string;
+  file: string;
+  size: number;
+  sha256: string;
+  date: string;
+}
+const FALLBACK_DOWNLOAD = '/indir/Kale2-2026.10.17-1.zip';
+const formatSize = (bytes: number) => `${Math.round(bytes / 1024 / 1024)} MB`;
 
 const regions = [
   { id: 'ork', name: 'ORK VADİSİ', type: 'VAHŞİ DOĞA / KEŞİF', description: 'Ormanlık yamaçların arasındaki bu vadi, kestirme arayan savaşçıları ödüllendirir. Yaratık kampları ve dar geçitler kontrolü ele geçirmek için önemlidir.' },
@@ -21,6 +29,8 @@ export function LandingPage() {
   const [regionIndex, setRegionIndex] = useState(0);
   const [preview, setPreview] = useState<{ src: string; caption: string } | null>(null);
   const [shareStatus, setShareStatus] = useState('');
+  const [latest, setLatest] = useState<LatestBuild | null>(null);
+  const downloadUrl = latest ? `/indir/${latest.file}` : FALLBACK_DOWNLOAD;
   const dialogRef = useRef<HTMLDialogElement>(null);
   const selectedRegion = regions[regionIndex];
 
@@ -29,6 +39,13 @@ export function LandingPage() {
     const observer = new IntersectionObserver((entries) => entries.forEach((entry) => entry.isIntersecting && entry.target.classList.add('is-visible')), { threshold: 0.12 });
     document.querySelectorAll('.reveal').forEach((el) => observer.observe(el));
     return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    fetch('/indir/latest.json', { cache: 'no-cache' })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((b: LatestBuild | null) => b?.file && setLatest(b))
+      .catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -86,7 +103,7 @@ export function LandingPage() {
             <div className="battle-facts" aria-label="Oyun özellikleri"><span className="match-time"><strong>30</strong> DAKİKA</span><span className="fair-play">PAY2WIN <b aria-label="yok">✕</b></span></div>
             <p className="loot-line">BOSS <i>/</i> METİN <i>/</i> SANDIK <i>/</i> ŞANS</p>
             <p className="hero-motto">İyi olan kazansın<span>.</span></p>
-            <div className="hero-actions"><a className="button button-primary" href={DOWNLOAD_URL} target="_blank" rel="noopener"><span>ÜCRETSİZ İNDİR</span><span aria-hidden>↓</span></a><a className="text-link" href="#indir"><span className="play-symbol" aria-hidden>▶</span> NASIL KURULUR</a></div>
+            <div className="hero-actions"><a className="button button-primary" href={downloadUrl} download><span>ÜCRETSİZ İNDİR</span><span aria-hidden>↓</span></a><a className="text-link" href="#indir"><span className="play-symbol" aria-hidden>▶</span> NASIL KURULUR</a></div>
           </div>
           <div className="hero-bottom page-width"><span>5 OYUNCU <i /> 30 DAKİKA <i /> TEK HEDEF: ZAFER</span><a href="#oyun">SAVAŞI KEŞFET <span aria-hidden>↓</span></a></div>
         </section>
@@ -99,9 +116,9 @@ export function LandingPage() {
 
         <section className="gallery-section section-shell" id="goruntuler" aria-labelledby="gallery-title"><div className="page-width reveal"><div className="section-label"><span>04</span> / OYUN İÇİ GÖRÜNTÜLER</div><div className="gallery-heading"><h2 id="gallery-title">DÜNYANIN <span>İÇİNDEN.</span></h2><p>Geliştirme sürümünden gerçek oyun görüntüleri.</p></div><div className="gallery-grid"><button className="gallery-card open-image" type="button" onClick={() => setPreview({ src: '/assets/gameplay-warrior.webp', caption: 'Savaşçı ve açık alan — oyun içi görüntü' })}><img src="/assets/gameplay-warrior.webp" alt="Savaşçı karakterin yeşil vadide ilerlediği oyun içi görüntü" loading="lazy" /><span className="gallery-caption"><small>OYUN İÇİ / 01</small><strong>SAVAŞÇININ YOLU</strong></span><span className="gallery-arrow" aria-hidden>↗</span></button><button className="gallery-card open-image" type="button" onClick={() => setPreview({ src: '/assets/gameplay-battlefield.webp', caption: 'Kızıl orman — oyun içi görüntü' })}><img src="/assets/gameplay-battlefield.webp" alt="Kızıl ormandaki yolun oyun içi görüntüsü" loading="lazy" /><span className="gallery-caption"><small>OYUN İÇİ / 02</small><strong>KIZIL ORMAN</strong></span><span className="gallery-arrow" aria-hidden>↗</span></button></div></div></section>
 
-        <section className="download-section section-shell" id="indir" aria-labelledby="download-title"><div className="page-width reveal"><div className="section-label"><span>05</span> / OYUNU İNDİR</div><div className="download-grid"><div className="download-copy"><h2 id="download-title">SAVAŞA<br /><span>KATIL.</span></h2><p>Kale Savaşları’nın geliştirme sürümünü ücretsiz indir ve savaş alanına ilk adımını at. Dosya Google Drive üzerinden indirilir.</p><div className="download-actions"><a className="button button-primary" href={DOWNLOAD_URL} target="_blank" rel="noopener"><span>OYUNU İNDİR</span><span aria-hidden>↓</span></a><a className="text-link" href={DRIVE_URL} target="_blank" rel="noopener">DRIVE'DA AÇ <span aria-hidden>↗</span></a></div></div><ol className="download-steps"><li><span>01</span><div><h3>İNDİR'E TIKLA</h3><p>“Oyunu İndir” düğmesine bas; indirme Google Drive üzerinden başlar.</p></div></li><li><span>02</span><div><h3>“YİNE DE İNDİR”</h3><p>Drive büyük dosya uyarısı gösterebilir. “Yine de indir” düğmesine tıkla.</p></div></li><li><span>03</span><div><h3>ÇIKAR VE BAŞLAT</h3><p>Arşivi klasöre çıkar, ardından oyunu çalıştır. Windows uyarı verirse “Ek bilgi” → “Yine de çalıştır”.</p></div></li></ol></div></div></section>
+        <section className="download-section section-shell" id="indir" aria-labelledby="download-title"><div className="page-width reveal"><div className="section-label"><span>05</span> / OYUNU İNDİR</div><div className="download-grid"><div className="download-copy"><h2 id="download-title">SAVAŞA<br /><span>KATIL.</span></h2><p>Kale Savaşları’nın geliştirme sürümünü ücretsiz indir ve savaş alanına ilk adımını at. Dosya doğrudan sunucumuzdan iner.</p><div className="download-actions"><a className="button button-primary" href={downloadUrl} download><span>OYUNU İNDİR</span><span aria-hidden>↓</span></a><span className="text-link">{latest ? `SÜRÜM ${latest.version} · ${formatSize(latest.size)} · WINDOWS` : 'WINDOWS · ZIP'}</span></div></div><ol className="download-steps"><li><span>01</span><div><h3>İNDİR'E TIKLA</h3><p>“Oyunu İndir” düğmesine bas; ZIP dosyası doğrudan iner. Yarıda kalırsa tarayıcıdan devam ettirebilirsin.</p></div></li><li><span>02</span><div><h3>KLASÖRE ÇIKAR</h3><p>ZIP dosyasına sağ tıkla → “Tümünü ayıkla”. Kale2 klasöründe Kale2.exe ve Kale2.pck yan yana olmalı.</p></div></li><li><span>03</span><div><h3>BAŞLAT</h3><p>Kale2.exe’yi çalıştır. Windows uyarı verirse “Ek bilgi” → “Yine de çalıştır”. Yeni sürüm çıkınca buradan tekrar indir.</p></div></li></ol></div></div></section>
 
-        <section className="closing-section" aria-labelledby="closing-title"><div className="closing-backdrop" /><div className="page-width closing-content reveal"><div className="section-label"><span>06</span> / SAVAŞ ÇAĞRISI</div><h2 id="closing-title">İYİ OLAN<br /><em>KAZANSIN.</em></h2><p>Kale Savaşları geliştirme aşamasında. Oyunu indir, arkadaşlarını da bu dünyaya çağır.</p><div className="closing-actions"><a className="button button-primary" href={DOWNLOAD_URL} target="_blank" rel="noopener"><span>OYUNU İNDİR</span><span aria-hidden>↓</span></a><button className="button button-outline share-button" type="button" onClick={share}>SAYFAYI PAYLAŞ <span aria-hidden>↗</span></button><a className="text-link" href="#top">BAŞA DÖN <span aria-hidden>↑</span></a></div><p className="share-status" role="status" aria-live="polite">{shareStatus}</p></div></section>
+        <section className="closing-section" aria-labelledby="closing-title"><div className="closing-backdrop" /><div className="page-width closing-content reveal"><div className="section-label"><span>06</span> / SAVAŞ ÇAĞRISI</div><h2 id="closing-title">İYİ OLAN<br /><em>KAZANSIN.</em></h2><p>Kale Savaşları geliştirme aşamasında. Oyunu indir, arkadaşlarını da bu dünyaya çağır.</p><div className="closing-actions"><a className="button button-primary" href={downloadUrl} download><span>OYUNU İNDİR</span><span aria-hidden>↓</span></a><button className="button button-outline share-button" type="button" onClick={share}>SAYFAYI PAYLAŞ <span aria-hidden>↗</span></button><a className="text-link" href="#top">BAŞA DÖN <span aria-hidden>↑</span></a></div><p className="share-status" role="status" aria-live="polite">{shareStatus}</p></div></section>
       </main>
 
       <footer className="footer"><div className="page-width footer-inner"><a href="#top"><Brand /></a><span>© {new Date().getFullYear()} Kale Savaşları. GELİŞTİRME SÜRÜMÜ.</span><a href="#top">YUKARI DÖN ↑</a></div></footer>
