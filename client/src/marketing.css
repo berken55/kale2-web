@@ -129,3 +129,9 @@
 .marketing-site .closing-section:after{content:none}
 .marketing-site .closing-content{padding:88px 0 72px}
 
+.download-actions{gap:16px}
+.download-meta{margin:18px 0 0;font:700 14px 'Barlow Condensed',sans-serif;letter-spacing:.15em;color:#c4edff}
+.platform-tabs{display:flex;gap:8px;margin-bottom:18px}
+.platform-tabs button{min-height:40px;padding:0 18px;background:none;border:1px solid var(--line);color:var(--muted);font:700 14px 'Barlow Condensed',sans-serif;letter-spacing:.16em;cursor:pointer;transition:color .2s,border-color .2s}
+.platform-tabs button:hover,.platform-tabs button.active{color:var(--gold);border-color:var(--gold)}
+@media(max-width:540px){.download-actions{gap:14px}.download-actions .button{width:100%}}

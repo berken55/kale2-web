@@ -2,14 +2,33 @@ import { useEffect, useRef, useState, type KeyboardEvent, type MouseEvent } from
 import '../marketing.css';
 
 /** Sunucudaki son sürüm: /indir/latest.json (deploy/nginx.conf). Okunamazsa sabit adres. */
-interface LatestBuild {
-  version: string;
+interface BuildFile {
   file: string;
   size: number;
   sha256: string;
-  date: string;
 }
-const FALLBACK_DOWNLOAD = '/indir/Kale2.zip';
+interface LatestBuild extends BuildFile {
+  version: string;
+  date: string;
+  mac?: BuildFile;
+}
+type Platform = 'windows' | 'mac';
+const PLATFORMS: Platform[] = ['windows', 'mac'];
+const FALLBACK_DOWNLOAD: Record<Platform, string> = { windows: '/indir/Kale2.zip', mac: '/indir/Kale2-Mac.zip' };
+const PLATFORM_NAME: Record<Platform, string> = { windows: 'WINDOWS', mac: 'MACOS' };
+const detectPlatform = (): Platform => (/Mac/i.test(navigator.platform || navigator.userAgent) && !/iPhone|iPad/i.test(navigator.userAgent) ? 'mac' : 'windows');
+const installSteps: Record<Platform, { title: string; text: string }[]> = {
+  windows: [
+    { title: "İNDİR'E TIKLA", text: '“Windows için indir” düğmesine bas; ZIP dosyası doğrudan iner. Yarıda kalırsa tarayıcıdan devam ettirebilirsin.' },
+    { title: 'KLASÖRE ÇIKAR', text: 'ZIP dosyasına sağ tıkla → “Tümünü ayıkla”. Kale2 klasöründe Kale2.exe ve Kale2.pck yan yana olmalı.' },
+    { title: 'BAŞLAT', text: 'Kale2.exe’yi çalıştır. Windows uyarı verirse “Ek bilgi” → “Yine de çalıştır”. Yeni sürüm çıkınca buradan tekrar indir.' },
+  ],
+  mac: [
+    { title: "İNDİR'E TIKLA", text: '“macOS için indir” düğmesine bas; ZIP dosyası doğrudan iner. Safari ZIP’i genelde kendisi açar, Kale2 uygulaması İndirilenler’de belirir.' },
+    { title: 'UYGULAMALAR’A TAŞI', text: 'ZIP açılmadıysa çift tıkla. Çıkan Kale2 uygulamasını Uygulamalar (Applications) klasörüne sürükle.' },
+    { title: 'İLK AÇILIŞ', text: 'Kale2’ye sağ tıkla → “Aç”. macOS engellerse Sistem Ayarları → Gizlilik ve Güvenlik → en altta “Yine de Aç”. Sonraki açılışlarda normal çift tıkla.' },
+  ],
+};
 const formatSize = (bytes: number) => `${Math.round(bytes / 1024 / 1024)} MB`;
 
 const regions = [
@@ -30,7 +49,11 @@ export function LandingPage() {
   const [preview, setPreview] = useState<{ src: string; caption: string } | null>(null);
   const [shareStatus, setShareStatus] = useState('');
   const [latest, setLatest] = useState<LatestBuild | null>(null);
-  const downloadUrl = latest ? `/indir/${latest.file}` : FALLBACK_DOWNLOAD;
+  const [platform, setPlatform] = useState<Platform>(detectPlatform);
+  const buildFor = (p: Platform): BuildFile | undefined => (p === 'mac' ? latest?.mac : latest ?? undefined);
+  const urlFor = (p: Platform) => { const b = buildFor(p); return b ? `/indir/${b.file}` : FALLBACK_DOWNLOAD[p]; };
+  const downloadUrl = urlFor(platform);
+  const currentBuild = buildFor(platform);
   const dialogRef = useRef<HTMLDialogElement>(null);
   const selectedRegion = regions[regionIndex];
 
@@ -76,17 +99,19 @@ export function LandingPage() {
     }
   };
 
-  const startDownload = (event: MouseEvent<HTMLAnchorElement>) => {
+  const downloadFor = (p: Platform) => (event: MouseEvent<HTMLAnchorElement>) => {
     event.preventDefault();
     setMenuOpen(false);
+    setPlatform(p);
     const link = document.createElement('a');
-    link.href = downloadUrl;
+    link.href = urlFor(p);
     link.download = '';
     document.body.appendChild(link);
     link.click();
     link.remove();
     document.getElementById('indir')?.scrollIntoView({ behavior: 'smooth' });
   };
+  const startDownload = downloadFor(platform);
 
   const heroMove = (event: MouseEvent<HTMLElement>) => {
     const rect = event.currentTarget.getBoundingClientRect();
@@ -138,7 +163,7 @@ export function LandingPage() {
 
         <section className="gallery-section section-shell" id="goruntuler" aria-labelledby="gallery-title"><div className="page-width reveal"><div className="section-label"><span>04</span> / OYUN İÇİ GÖRÜNTÜLER</div><div className="gallery-heading"><h2 id="gallery-title">DÜNYANIN <span>İÇİNDEN.</span></h2><p>Geliştirme sürümünden gerçek oyun görüntüleri.</p></div><div className="gallery-grid"><button className="gallery-card open-image" type="button" onClick={() => setPreview({ src: '/assets/gameplay-warrior.webp', caption: 'Savaşçı ve açık alan — oyun içi görüntü' })}><img src="/assets/gameplay-warrior.webp" alt="Savaşçı karakterin yeşil vadide ilerlediği oyun içi görüntü" loading="lazy" /><span className="gallery-caption"><small>OYUN İÇİ / 01</small><strong>SAVAŞÇININ YOLU</strong></span><span className="gallery-arrow" aria-hidden>↗</span></button><button className="gallery-card open-image" type="button" onClick={() => setPreview({ src: '/assets/gameplay-battlefield.webp', caption: 'Kızıl orman — oyun içi görüntü' })}><img src="/assets/gameplay-battlefield.webp" alt="Kızıl ormandaki yolun oyun içi görüntüsü" loading="lazy" /><span className="gallery-caption"><small>OYUN İÇİ / 02</small><strong>KIZIL ORMAN</strong></span><span className="gallery-arrow" aria-hidden>↗</span></button></div></div></section>
 
-        <section className="download-section section-shell" id="indir" aria-labelledby="download-title"><div className="page-width reveal"><div className="section-label"><span>05</span> / OYUNU İNDİR</div><div className="download-grid"><div className="download-copy"><h2 id="download-title">SAVAŞA<br /><span>KATIL.</span></h2><p>Kale Savaşları’nın geliştirme sürümünü ücretsiz indir ve savaş alanına ilk adımını at. Dosya tek tıkla, doğrudan iner.</p><div className="download-actions"><a className="button button-primary" href={downloadUrl} onClick={startDownload}><span>OYUNU İNDİR</span><span aria-hidden>↓</span></a><span className="text-link">{latest ? `SÜRÜM ${latest.version} · ${formatSize(latest.size)} · WINDOWS` : 'WINDOWS · ZIP'}</span></div></div><ol className="download-steps"><li><span>01</span><div><h3>İNDİR'E TIKLA</h3><p>“Oyunu İndir” düğmesine bas; ZIP dosyası doğrudan iner. Yarıda kalırsa tarayıcıdan devam ettirebilirsin.</p></div></li><li><span>02</span><div><h3>KLASÖRE ÇIKAR</h3><p>ZIP dosyasına sağ tıkla → “Tümünü ayıkla”. Kale2 klasöründe Kale2.exe ve Kale2.pck yan yana olmalı.</p></div></li><li><span>03</span><div><h3>BAŞLAT</h3><p>Kale2.exe’yi çalıştır. Windows uyarı verirse “Ek bilgi” → “Yine de çalıştır”. Yeni sürüm çıkınca buradan tekrar indir.</p></div></li></ol></div></div></section>
+        <section className="download-section section-shell" id="indir" aria-labelledby="download-title"><div className="page-width reveal"><div className="section-label"><span>05</span> / OYUNU İNDİR</div><div className="download-grid"><div className="download-copy"><h2 id="download-title">SAVAŞA<br /><span>KATIL.</span></h2><p>Kale Savaşları’nın geliştirme sürümünü ücretsiz indir ve savaş alanına ilk adımını at. Dosya tek tıkla, doğrudan iner.</p><div className="download-actions">{PLATFORMS.map((p) => <a key={p} className={`button ${p === platform ? 'button-primary' : 'button-outline'}`} href={urlFor(p)} onClick={downloadFor(p)}><span>{PLATFORM_NAME[p]} İÇİN İNDİR</span><span aria-hidden>↓</span></a>)}</div><p className="download-meta">{latest ? `SÜRÜM ${latest.version}${currentBuild ? ` · ${formatSize(currentBuild.size)}` : ''} · ` : ''}{PLATFORM_NAME[platform]} · ZIP</p></div><div><div className="platform-tabs" role="tablist" aria-label="Kurulum adımları">{PLATFORMS.map((p) => <button key={p} type="button" role="tab" aria-selected={p === platform} className={p === platform ? 'active' : ''} onClick={() => setPlatform(p)}>{PLATFORM_NAME[p]}</button>)}</div><ol className="download-steps">{installSteps[platform].map((step, i) => <li key={step.title}><span>{String(i + 1).padStart(2, '0')}</span><div><h3>{step.title}</h3><p>{step.text}</p></div></li>)}</ol></div></div></div></section>
 
         <section className="closing-section" aria-labelledby="closing-title"><div className="page-width closing-content reveal"><div className="section-label"><span>06</span> / SAVAŞ ÇAĞRISI</div><h2 id="closing-title">İYİ OLAN<br /><em>KAZANSIN.</em></h2><p>Kale Savaşları geliştirme aşamasında. Oyunu indir, arkadaşlarını da bu dünyaya çağır.</p><div className="closing-actions"><a className="button button-primary" href={downloadUrl} onClick={startDownload}><span>OYUNU İNDİR</span><span aria-hidden>↓</span></a><button className="button button-outline share-button" type="button" onClick={share}>SAYFAYI PAYLAŞ <span aria-hidden>↗</span></button><a className="text-link" href="#top">BAŞA DÖN <span aria-hidden>↑</span></a></div><p className="share-status" role="status" aria-live="polite">{shareStatus}</p></div></section>
       </main>
