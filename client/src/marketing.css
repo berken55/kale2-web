@@ -36,7 +36,7 @@
   --gold:#ffcf6b;--gold-deep:#fa863b;--display:'Cinzel',Georgia,serif;
   background:radial-gradient(ellipse at 0 20%,#26377d55,transparent 45%),#0c1023;
 }
-.marketing-site .site-header{height:90px;border-color:#8cc9ff30;background:linear-gradient(180deg,#0a1027ed,#111b3b88);backdrop-filter:blur(14px)}
+.marketing-site .site-header{height:90px;border-color:#8cc9ff30;background:linear-gradient(180deg,#0a1027f2,#111b3bd9);backdrop-filter:none}
 .marketing-site .brand-mark{width:47px;height:51px;transform:none;border:1px solid #ffcd67;clip-path:polygon(0 0,100% 0,100% 75%,50% 100%,0 75%);background:linear-gradient(145deg,#ffd97a,#e47a32);color:#2a1735;font-size:35px;box-shadow:0 0 32px #ff97354d}
 .marketing-site .brand-copy strong{font-size:clamp(13px,1.4vw,21px);letter-spacing:.035em;color:#ffe5a0;text-shadow:0 0 20px #ffb63d70}
 .marketing-site .brand-copy small{font-family:'Barlow Condensed',sans-serif;font-size:11px;letter-spacing:.25em;color:#9bdfff;margin-top:7px}
@@ -47,8 +47,7 @@
 .marketing-site .hero{height:auto;min-height:850px;background:#102046}
 .marketing-site .hero-image:before{filter:blur(20px) brightness(.7) saturate(1.7)}
 .marketing-site .hero-image:after{left:32%;right:-9%;top:49%;filter:saturate(1.45) brightness(1.13);mask-image:linear-gradient(90deg,transparent,#000 25%);-webkit-mask-image:linear-gradient(90deg,transparent,#000 25%)}
-.marketing-site .hero:before{background:linear-gradient(90deg,#0a1129f5 0%,#102048de 25%,#14265340 66%,#22133230),linear-gradient(0deg,#0c1023,transparent 40%)}
-.marketing-site .hero:after{background:radial-gradient(ellipse at 12% 35%,#2351ac45,transparent 50%),radial-gradient(ellipse at 88% 35%,#fa683b40,transparent 45%)}
+.marketing-site .hero:after{background:radial-gradient(ellipse at 12% 35%,#2351ac30,transparent 50%),radial-gradient(ellipse at 88% 35%,#fa683b22,transparent 42%)}
 .marketing-site .hero-content{padding-top:165px;padding-bottom:115px;position:relative}
 .marketing-site .hero-eyebrow{color:#9bebff;font-family:'Barlow Condensed',sans-serif;font-size:14px;letter-spacing:.25em}
 .marketing-site .eyebrow-line{background:#7bdefa;box-shadow:0 0 16px #45ceff}
@@ -104,7 +103,7 @@
   .marketing-site .hero{min-height:800px}.marketing-site .hero-content{padding-top:146px;padding-bottom:110px}
   .marketing-site .hero h1{font-size:clamp(35px,7.2vw,58px)}.marketing-site .hero h1 .hero-versus{font-size:116px}
   .marketing-site .hero-image:after{left:0;right:0;top:0;bottom:0;filter:saturate(1.4);mask-image:none;-webkit-mask-image:none;transform:none}
-  .marketing-site .hero:before{background:linear-gradient(90deg,#0a1129ed,#15274b88),linear-gradient(0deg,#0c1023,transparent 80%)}
+  .marketing-site .hero:before{background:linear-gradient(90deg,#0a1129f0,#102048a8 30%,transparent 55%),linear-gradient(0deg,#0c1023d9,transparent 75%)}
   .marketing-site .hero-eyebrow{font-size:12px;letter-spacing:.13em}.marketing-site .hero-content>.loot-line{font-size:20px;letter-spacing:.06em}
   .marketing-site .hero-content>.hero-motto{font-size:25px}.marketing-site .hero-actions{gap:24px}.marketing-site .hero-bottom{font-size:11px;letter-spacing:.12em}
   .marketing-site .feature-grid{grid-template-columns:1fr}.marketing-site .feature{min-height:0}.marketing-site .feature+.feature{border:1px solid #bd8bff66}
@@ -135,3 +134,21 @@
 .platform-tabs button{min-height:40px;padding:0 18px;background:none;border:1px solid var(--line);color:var(--muted);font:700 14px 'Barlow Condensed',sans-serif;letter-spacing:.16em;cursor:pointer;transition:color .2s,border-color .2s}
 .platform-tabs button:hover,.platform-tabs button.active{color:var(--gold);border-color:var(--gold)}
 @media(max-width:540px){.download-actions{gap:14px}.download-actions .button{width:100%}}
+
+/* Hero: MP4 (CDN) — tam alan, sağda oyun kadrajı */
+.hero-video{position:absolute;inset:0;z-index:-3;overflow:hidden;pointer-events:none;background:#0a1129}
+.hero-video-media{position:absolute;top:50%;left:50%;min-width:100%;min-height:100%;width:auto;height:auto;transform:translate(-50%,-50%);object-fit:cover;object-position:68% center}
+.marketing-site .hero-image-fallback{display:none}
+.marketing-site .hero-image-fallback--visible{display:block}
+.marketing-site .hero-video-media{transform:translate(calc(-50% + var(--mouse-x,0px)),calc(-50% + var(--mouse-y,0px)));transition:transform .25s ease-out;filter:saturate(1.1) contrast(1.03)}
+.marketing-site .hero-video{-webkit-mask-image:linear-gradient(90deg,transparent 0%,#000 22%),linear-gradient(0deg,transparent,#000 14%,#000 86%,transparent);mask-image:linear-gradient(90deg,transparent 0%,#000 22%),linear-gradient(0deg,transparent,#000 14%,#000 86%,transparent);mask-composite:intersect;-webkit-mask-composite:source-in}
+.marketing-site .hero:before{z-index:-2;background:linear-gradient(90deg,#0a1129f5 0%,#102048de 28%,#14265330 46%,transparent 58%),linear-gradient(0deg,#0c1023e0,transparent 36%)}
+.marketing-site .hero:after{z-index:-1}
+@media(max-width:780px){
+  .marketing-site .hero-video{-webkit-mask-image:linear-gradient(0deg,transparent,#000 10%,#000 90%,transparent);mask-image:linear-gradient(0deg,transparent,#000 10%,#000 90%,transparent)}
+  .marketing-site .hero-video-media{object-position:60% center}
+}
+@media (prefers-reduced-motion:reduce){
+  .hero-video{display:none}
+  .marketing-site .hero-image-fallback,.marketing-site .hero-image-fallback--visible{display:block}
+}

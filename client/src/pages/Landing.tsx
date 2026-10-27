@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type KeyboardEvent, type MouseEvent } from 'react';
+import { HERO_VIDEO_POSTER, HERO_VIDEO_SRC } from '../heroVideo';
 import '../marketing.css';
 
 /** Sunucudaki son sürüm: /indir/latest.json (deploy/nginx.conf). Okunamazsa sabit adres. */
@@ -55,6 +56,8 @@ export function LandingPage() {
   const downloadUrl = urlFor(platform);
   const currentBuild = buildFor(platform);
   const dialogRef = useRef<HTMLDialogElement>(null);
+  const heroVideoElRef = useRef<HTMLVideoElement>(null);
+  const [heroVideoFailed, setHeroVideoFailed] = useState(!HERO_VIDEO_SRC);
   const selectedRegion = regions[regionIndex];
 
   useEffect(() => {
@@ -70,6 +73,15 @@ export function LandingPage() {
       .then((b: LatestBuild | null) => b?.file && setLatest(b))
       .catch(() => {});
   }, []);
+
+  useEffect(() => {
+    const el = heroVideoElRef.current;
+    if (!el || heroVideoFailed) return;
+    const play = () => el.play().catch(() => {});
+    if (el.readyState >= 2) play();
+    else el.addEventListener('loadeddata', play, { once: true });
+    return () => el.removeEventListener('loadeddata', play);
+  }, [heroVideoFailed]);
 
   useEffect(() => {
     if (preview) dialogRef.current?.showModal();
@@ -132,7 +144,28 @@ export function LandingPage() {
 
       <main id="main">
         <section className="hero" aria-labelledby="hero-title" onMouseMove={heroMove}>
-          <div className="hero-image" role="img" aria-label="Dağ tapınaklarının önünde üç zırhlı savaşçı" />
+          {!heroVideoFailed && HERO_VIDEO_SRC ? (
+            <div className="hero-video" aria-hidden>
+              <video
+                ref={heroVideoElRef}
+                className="hero-video-media"
+                src={HERO_VIDEO_SRC}
+                poster={HERO_VIDEO_POSTER}
+                autoPlay
+                muted
+                loop
+                playsInline
+                preload="auto"
+                tabIndex={-1}
+                onError={() => setHeroVideoFailed(true)}
+              />
+            </div>
+          ) : null}
+          <div
+            className={`hero-image hero-image-fallback${heroVideoFailed ? ' hero-image-fallback--visible' : ''}`}
+            role="img"
+            aria-label="Kale Savaşları oyun görüntüsü"
+          />
           <div className="hero-runes" aria-hidden><i /><i /><i /></div>
           <div className="hero-content page-width">
             <div className="eyebrow hero-eyebrow"><span className="eyebrow-line" /> TAKIMINI TOPLA. KALEYİ ELE GEÇİR.</div>
