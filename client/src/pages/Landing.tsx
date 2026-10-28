@@ -1,208 +1,1530 @@
-import { useEffect, useRef, useState, type KeyboardEvent, type MouseEvent } from 'react';
-import { HERO_VIDEO_POSTER, HERO_VIDEO_SRC } from '../heroVideo';
+import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from 'react';
+import { Link } from 'react-router-dom';
+import { HERO_VIDEO_SRC } from '../heroVideo';
 import '../marketing.css';
 
-/** Sunucudaki son sürüm: /indir/latest.json (deploy/nginx.conf). Okunamazsa sabit adres. */
-interface BuildFile {
-  file: string;
-  size: number;
-  sha256: string;
+/* Karakter verileri */
+interface CharacterData {
+  name: string;
+  role: string;
+  description: string;
+  paths: string[];
+  image: string;
+  alt: string;
+  label: string;
+  letter: string;
 }
-interface LatestBuild extends BuildFile {
-  version: string;
-  date: string;
-  mac?: BuildFile;
-}
-type Platform = 'windows' | 'mac';
-const PLATFORMS: Platform[] = ['windows', 'mac'];
-const FALLBACK_DOWNLOAD: Record<Platform, string> = { windows: '/indir/Kale2.zip', mac: '/indir/Kale2-Mac.zip' };
-const PLATFORM_NAME: Record<Platform, string> = { windows: 'WINDOWS', mac: 'MACOS' };
-const detectPlatform = (): Platform => (/Mac/i.test(navigator.platform || navigator.userAgent) && !/iPhone|iPad/i.test(navigator.userAgent) ? 'mac' : 'windows');
-const installSteps: Record<Platform, { title: string; text: string }[]> = {
-  windows: [
-    { title: "İNDİR'E TIKLA", text: '“Windows için indir” düğmesine bas; ZIP dosyası doğrudan iner. Yarıda kalırsa tarayıcıdan devam ettirebilirsin.' },
-    { title: 'KLASÖRE ÇIKAR', text: 'ZIP dosyasına sağ tıkla → “Tümünü ayıkla”. Kale2 klasöründe Kale2.exe ve Kale2.pck yan yana olmalı.' },
-    { title: 'BAŞLAT', text: 'Kale2.exe’yi çalıştır. Windows uyarı verirse “Ek bilgi” → “Yine de çalıştır”. Yeni sürüm çıkınca buradan tekrar indir.' },
-  ],
-  mac: [
-    { title: "İNDİR'E TIKLA", text: '“macOS için indir” düğmesine bas; ZIP dosyası doğrudan iner. Safari ZIP’i genelde kendisi açar, Kale2 uygulaması İndirilenler’de belirir.' },
-    { title: 'UYGULAMALAR’A TAŞI', text: 'ZIP açılmadıysa çift tıkla. Çıkan Kale2 uygulamasını Uygulamalar (Applications) klasörüne sürükle.' },
-    { title: 'İLK AÇILIŞ', text: 'Kale2’ye sağ tıkla → “Aç”. macOS engellerse Sistem Ayarları → Gizlilik ve Güvenlik → en altta “Yine de Aç”. Sonraki açılışlarda normal çift tıkla.' },
-  ],
+
+const CHARACTERS: Record<'warrior' | 'ninja', CharacterData> = {
+  warrior: {
+    name: 'SAVAŞÇI',
+    role: 'ÖN CEPHENİN SARSILMAZ GÜCÜ',
+    description: 'İlk adımı sen at. Rakibin hattını kır, takımına alan aç. Gücünü bedensel baskıyla mı, zihinsel savunmayla mı göstereceksin?',
+    paths: ['BEDENSEL', 'ZİHİNSEL'],
+    image: '/assets/campaign/warrior.webp',
+    alt: 'Savaşçı karakter konsepti',
+    label: 'SAVAŞÇI / KARAKTER KONSEPTİ',
+    letter: 'S',
+  },
+  ninja: {
+    name: 'NİNJA',
+    role: 'GÖLGELERDEKİ SON HAMLE',
+    description: 'Yüksekten gözetle. Açık veren rakibi yakala. Yakın dövüşte pusunu kur ya da yayını kuşanıp mesafeyi kendi lehine kullan.',
+    paths: ['YAKIN DÖVÜŞ', 'UZAK DÖVÜŞ'],
+    image: '/assets/campaign/ninja.webp',
+    alt: 'Oyun içindeki ninja karakteri',
+    label: 'NİNJA / OYUN İÇİ KARAKTER',
+    letter: 'N',
+  },
 };
-const formatSize = (bytes: number) => `${Math.round(bytes / 1024 / 1024)} MB`;
 
-const regions = [
-  { id: 'ork', name: 'ORK VADİSİ', type: 'VAHŞİ DOĞA / KEŞİF', description: 'Ormanlık yamaçların arasındaki bu vadi, kestirme arayan savaşçıları ödüllendirir. Yaratık kampları ve dar geçitler kontrolü ele geçirmek için önemlidir.' },
-  { id: 'spider', name: 'ÖRÜMCEK ZİNDANI', type: 'KARANLIK ZİNDAN / RİSK', description: 'Koyu dağların sardığı izole bir çanak. Dış dünyanın ışığı kaybolurken dar geçitler ve örümcek yuvası daha tehlikeli bir rota açar.' },
-  { id: 'desert', name: 'ÇÖL HARABELERİ', type: 'KUMULLAR / HARABELER', description: 'Kumların yuttuğu eski taşlar ve açık görüş alanları. Burada saklanacak orman yok; doğru zamanı seçmek her şeydir.' },
-  { id: 'fire', name: 'ATEŞ DİYARI', type: 'VOLKANİK BÖLGE / GÜÇ', description: 'Lav çatlaklarının aydınlattığı dağlar arasında savaş sertleşir. Geçitleri tutan taraf bu tehlikeli bölgenin gücünü ele geçirir.' },
-  { id: 'metin', name: 'METİN VADİSİ', type: 'MERKEZ / BOSS ALANI', description: 'Haritanın kalbinde yükselen Metin taşları, iki krallığı aynı hedefe çağırır. Merkezdeki mücadele savaşın ritmini değiştirir.' },
-] as const;
-
-function Brand() {
-  return <span className="brand"><span className="brand-mark" aria-hidden="true">♜</span><span className="brand-copy"><strong>KALE SAVAŞLARI</strong><small>5 VS 5 · TEK BİR ZAFER</small></span></span>;
+/* Uzmanlık verileri */
+interface SpecialtyData {
+  role: string;
+  title: string;
+  description: string;
+  traits: string[];
+  counter: string;
+  skills: [string, string][];
 }
+
+const SPECIALTIES: Record<string, SpecialtyData> = {
+  bedensel: {
+    role: 'SAVAŞÇI / BASKI VE TAKİP',
+    title: 'CEPHEYİ YAR.',
+    description: 'Dövüşün ritmini ele geçir. Yakın mesafede baskıyı sürdür, kaçmaya çalışan rakibe nefes aldırma.',
+    traits: ['Yakın dövüş', 'Sürekli baskı', 'Kovalama'],
+    counter: 'Rakibinin fırsatı: Hamleni boşa çıkarıp mesafeyi açmak.',
+    skills: [
+      ['Üç Yönlü Kesme', 'Önündeki alana art arda kesikler. Rakibin kaçış yönünü önceden oku.'],
+      ['Kılıç Çevirme', 'Çevrendeki rakiplere alan baskısı. Bir araya geldikleri anı bekle.'],
+      ['Hamle', 'Seçtiğin rakiple aranı kapat. Takımın hazırken çatışmayı başlat.'],
+      ['Hava Kılıcı', 'Saldırılarını güçlendiren bir pencere. Baskın öncesi doğru anı seç.'],
+      ['Öfke', 'Saldırı ve hareket temposunu yükselt. Geri çekilen rakibi zorla.'],
+    ],
+  },
+  zihinsel: {
+    role: 'SAVAŞÇI / SAVUNMA VE ALAN KONTROLÜ',
+    title: 'HATTI TUT.',
+    description: 'Takımının önünde dur. Savunmanla zaman kazan; mesafeli yeteneklerinle rakibin rahatça ilerlemesini engelle.',
+    traits: ['Yüksek savunma', 'Menzilli yetenek', 'Takım koruma'],
+    counter: 'Rakibinin fırsatı: Güçlü yeteneğini boşa harcatmak ve uzun normal vuruş mücadelesine zorlamak.',
+    skills: [
+      ['Güçlü Beden', 'Savunmanı yükseltip takımına hareket alanı aç.'],
+      ['Ruh Vuruşu', 'Önündeki hatta uzanan güçlü bir saldırı. Rakibin yönünü tahmin et.'],
+      ['Şiddetli Vuruş', 'Mesafeli bir darbe ile rakibin ilerleyişini baskıla.'],
+      ['Kılıç Darbesi', 'Hedefin üzerinde kontrol kurmaya yönelik bir saldırı fırsatı.'],
+      ['Yere Vurma', 'Yakın çevrendeki baskını dağıt; dostlarının çıkışına alan bırak.'],
+    ],
+  },
+  yakin: {
+    role: 'NİNJA / PUSU VE ANİ BASKI',
+    title: 'AÇIĞI YAKALA.',
+    description: 'Sabırlı ol. Hedefini takip et. Takımından uzaklaşan rakibe, en beklemediği anda yaklaş.',
+    traits: ['Hançer', 'Pusu', 'Ani saldırı'],
+    counter: 'Rakibinin fırsatı: Girişinden sonra kaçış yolunu kapatmak. Uzun süre açıkta kalma.',
+    skills: [
+      ['Pusu', 'Doğru yaklaşma açısını bulduğunda sert bir yakın saldırı yap.'],
+      ['Hızlı Saldırı', 'Aradaki boşluğu kapatıp açık veren hedefe yüklen.'],
+      ['Bıçak Çevirme', 'Yakınındaki mücadelede hareket ve saldırıyı bir araya getir.'],
+      ['Gölge Adımı', 'Zamanlamanla tehlikeden sıyrıl veya yeni bir saldırı açısı yakala.'],
+      ['Zehirli Darbe', 'Kaçan rakip üzerinde baskıyı sürdürmeye yönelik bir vuruş.'],
+    ],
+  },
+  uzak: {
+    role: 'NİNJA / GÖRÜŞ VE MESAFE',
+    title: 'MESAFE SENİN.',
+    description: 'Patikadan yüksel. Savaş alanını gözle. Yayınla baskı kurarken rakibin sana ulaşacağı yolu da hesaba kat.',
+    traits: ['Yay', 'Gözetleme', 'Menzilli baskı'],
+    counter: 'Rakibinin fırsatı: Menzilinden çıkmak veya patikayı kullanıp yakına girmek.',
+    skills: [
+      ['Tekrarlanan Atış', 'Aynı hedef üzerinde ok baskısı kur. Mesafeyi kaybetme.'],
+      ['Ok Yağmuru', 'Bir alana baskı uygulayarak rakibin hareketini zorla.'],
+      ['Alevli Ok', 'Doğru anda kullanacağın güçlü bir atış penceresi.'],
+      ['Yavaşlatan Ok', 'Kaçan hedefin peşine takımının yetişmesine yardımcı ol.'],
+      ['Hafif Adım', 'Konumunu değiştir; mesafeyi yeniden kur veya avını takip et.'],
+    ],
+  },
+};
+
+const SPECIALTY_KEYS = ['bedensel', 'zihinsel', 'yakin', 'uzak'] as const;
+
+/* Galeri verileri */
+const GALLERY_ITEMS = [
+  { image: '/assets/campaign/castle.webp', caption: '01 / KALE KAPILARINDA — OYUN İÇİ GÖRÜNTÜ' },
+  { image: '/assets/campaign/battle.webp', caption: '02 / CEPHEYE DOĞRU — OYUN İÇİ GÖRÜNTÜ' },
+  { image: '/assets/campaign/night.webp', caption: '03 / GECE NÖBETİ — OYUN İÇİ GÖRÜNTÜ' },
+  { image: '/assets/campaign/world.webp', caption: '04 / SAVAŞ ALANI — KONSEPT HARİTA' },
+  { image: '/assets/campaign/sunset.webp', caption: '05 / SAVAŞ ALANI — GÜN BATIMI' },
+  { image: '/assets/campaign/hero.webp', caption: '06 / KALE2 EVRENİ — KONSEPT GÖRSEL' },
+  { image: '/assets/campaign/warrior.webp', caption: '07 / SAVAŞÇI — KARAKTER KONSEPTİ' },
+  { image: '/assets/campaign/ninja.webp', caption: '08 / NİNJA — OYUN İÇİ KARAKTER' },
+];
+
+const STORAGE_KEY = 'kale2-demo-application-v1';
 
 export function LandingPage() {
+  /* Mobil menü durumu */
   const [menuOpen, setMenuOpen] = useState(false);
-  const [regionIndex, setRegionIndex] = useState(0);
-  const [preview, setPreview] = useState<{ src: string; caption: string } | null>(null);
-  const [shareStatus, setShareStatus] = useState('');
-  const [latest, setLatest] = useState<LatestBuild | null>(null);
-  const [platform, setPlatform] = useState<Platform>(detectPlatform);
-  const buildFor = (p: Platform): BuildFile | undefined => (p === 'mac' ? latest?.mac : latest ?? undefined);
-  const urlFor = (p: Platform) => { const b = buildFor(p); return b ? `/indir/${b.file}` : FALLBACK_DOWNLOAD[p]; };
-  const downloadUrl = urlFor(platform);
-  const currentBuild = buildFor(platform);
-  const dialogRef = useRef<HTMLDialogElement>(null);
-  const heroVideoElRef = useRef<HTMLVideoElement>(null);
-  const [heroVideoFailed, setHeroVideoFailed] = useState(!HERO_VIDEO_SRC);
-  const selectedRegion = regions[regionIndex];
 
+  /* Karakter sekmesi durumu */
+  const [characterKey, setCharacterKey] = useState<'warrior' | 'ninja'>('warrior');
+  const character = CHARACTERS[characterKey];
+
+  /* Uzmanlık sekmesi durumu */
+  const [specialtyKey, setSpecialtyKey] = useState<string>('bedensel');
+  const specialty = SPECIALTIES[specialtyKey];
+
+  /* Ganimet / sandık taşıyıcı simülasyonu */
+  const [chestRunning, setChestRunning] = useState(false);
+  const [chestSeconds, setChestSeconds] = useState(60);
+  const chestTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  /* Galeri Lightbox */
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+
+  /* Video oynatıcı durumu (BİR MAÇ. BİN İHTİMAL. altındaki video) */
+  const trailerVideoRef = useRef<HTMLVideoElement>(null);
+  const [trailerPlaying, setTrailerPlaying] = useState(true);
+  const [trailerMuted, setTrailerMuted] = useState(true);
+  const [trailerProgress, setTrailerProgress] = useState(0);
+
+  /* Topluluk Dialogu */
+  const [communityOpen, setCommunityOpen] = useState(false);
+
+  /* Başvuru formu durumu */
+  const [nickname, setNickname] = useState('');
+  const [email, setEmail] = useState('');
+  const [formSpecialty, setFormSpecialty] = useState('');
+  const [acknowledge, setAcknowledge] = useState(false);
+  const [formResult, setFormResult] = useState('');
+  const [hasSavedApplication, setHasSavedApplication] = useState(false);
+
+  /* Sayfa başlığı ve form geri yükleme */
   useEffect(() => {
-    document.title = 'Kale Savaşları — İyi olan kazansın';
-    const observer = new IntersectionObserver((entries) => entries.forEach((entry) => entry.isIntersecting && entry.target.classList.add('is-visible')), { threshold: 0.12 });
-    document.querySelectorAll('.reveal').forEach((el) => observer.observe(el));
-    return () => observer.disconnect();
-  }, []);
-
-  useEffect(() => {
-    fetch('/indir/latest.json', { cache: 'no-cache' })
-      .then((r) => (r.ok ? r.json() : null))
-      .then((b: LatestBuild | null) => b?.file && setLatest(b))
-      .catch(() => {});
-  }, []);
-
-  useEffect(() => {
-    const el = heroVideoElRef.current;
-    if (!el || heroVideoFailed) return;
-    const play = () => el.play().catch(() => {});
-    if (el.readyState >= 2) play();
-    else el.addEventListener('loadeddata', play, { once: true });
-    return () => el.removeEventListener('loadeddata', play);
-  }, [heroVideoFailed]);
-
-  useEffect(() => {
-    if (preview) dialogRef.current?.showModal();
-    else if (dialogRef.current?.open) dialogRef.current.close();
-  }, [preview]);
-
-  const chooseRegion = (index: number, focus = false) => {
-    setRegionIndex(index);
-    if (focus) requestAnimationFrame(() => document.getElementById(`region-${regions[index].id}`)?.focus());
-  };
-
-  const regionKey = (event: KeyboardEvent<HTMLButtonElement>, index: number) => {
-    if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) return;
-    event.preventDefault();
-    const next = event.key === 'Home' ? 0 : event.key === 'End' ? regions.length - 1 : (index + (event.key === 'ArrowDown' ? 1 : -1) + regions.length) % regions.length;
-    chooseRegion(next, true);
-  };
-
-  const share = async () => {
-    const data = { title: document.title, text: 'Kale Savaşları — İyi olan kazansın', url: window.location.href };
+    document.title = 'KALE2 — Zaferin bir bedeli var.';
     try {
-      if (navigator.share) { await navigator.share(data); setShareStatus('Paylaşım hazır.'); }
-      else if (navigator.clipboard) { await navigator.clipboard.writeText(data.url); setShareStatus('Sayfa bağlantısı kopyalandı.'); }
-      else setShareStatus('Bağlantıyı adres çubuğundan kopyalayabilirsin.');
-    } catch (error) {
-      if ((error as Error).name !== 'AbortError') setShareStatus('Paylaşım açılamadı; bağlantıyı adres çubuğundan kopyalayabilirsin.');
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) {
+        const data = JSON.parse(raw);
+        if (typeof data.nickname === 'string') setNickname(data.nickname);
+        if (typeof data.email === 'string') setEmail(data.email);
+        if (typeof data.specialty === 'string') setFormSpecialty(data.specialty);
+        setFormResult('Bu tarayıcıda kayıtlı bir taslak başvurun var. Güncelleyebilir veya silebilirsin.');
+        setHasSavedApplication(true);
+      }
+    } catch {
+      // LocalStorage kısıtlı olabilir
+    }
+  }, []);
+
+  /* Dialog açıldığında body scrollunu engelle */
+  useEffect(() => {
+    const hasModal = lightboxIndex !== null || communityOpen;
+    if (hasModal) {
+      document.body.classList.add('modal-open');
+    } else {
+      document.body.classList.remove('modal-open');
+    }
+    return () => document.body.classList.remove('modal-open');
+  }, [lightboxIndex, communityOpen]);
+
+  /* Klavye kısayolları (Escape ve Ok tuşları) */
+  useEffect(() => {
+    if (lightboxIndex === null && !communityOpen) return;
+    const handleKeyDown = (e: globalThis.KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setLightboxIndex(null);
+        setCommunityOpen(false);
+      } else if (lightboxIndex !== null && e.key === 'ArrowRight') {
+        setLightboxIndex((prev) =>
+          prev !== null ? (prev + 1) % GALLERY_ITEMS.length : null,
+        );
+      } else if (lightboxIndex !== null && e.key === 'ArrowLeft') {
+        setLightboxIndex((prev) =>
+          prev !== null
+            ? (prev - 1 + GALLERY_ITEMS.length) % GALLERY_ITEMS.length
+            : null,
+        );
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [lightboxIndex, communityOpen]);
+
+  /* Ganimet zamanlayıcısı */
+  const toggleChestDemo = () => {
+    if (chestRunning || chestSeconds < 60) {
+      if (chestTimerRef.current) clearInterval(chestTimerRef.current);
+      chestTimerRef.current = null;
+      setChestRunning(false);
+      setChestSeconds(60);
+      return;
+    }
+    setChestRunning(true);
+    setChestSeconds(60);
+    const deadline = Date.now() + 60000;
+    chestTimerRef.current = setInterval(() => {
+      const remaining = Math.max(0, Math.ceil((deadline - Date.now()) / 1000));
+      setChestSeconds(remaining);
+      if (remaining === 0) {
+        if (chestTimerRef.current) clearInterval(chestTimerRef.current);
+        chestTimerRef.current = null;
+        setChestRunning(false);
+      }
+    }, 250);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (chestTimerRef.current) clearInterval(chestTimerRef.current);
+    };
+  }, []);
+
+  /* Fragman Video Kontrolleri */
+  const toggleTrailerPlay = () => {
+    const el = trailerVideoRef.current;
+    if (!el) return;
+    if (el.paused) {
+      el.play().catch(() => {});
+      setTrailerPlaying(true);
+    } else {
+      el.pause();
+      setTrailerPlaying(false);
     }
   };
 
-  const downloadFor = (p: Platform) => (event: MouseEvent<HTMLAnchorElement>) => {
-    event.preventDefault();
-    setMenuOpen(false);
-    setPlatform(p);
-    const link = document.createElement('a');
-    link.href = urlFor(p);
-    link.download = '';
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    document.getElementById('indir')?.scrollIntoView({ behavior: 'smooth' });
+  const toggleTrailerMute = () => {
+    const el = trailerVideoRef.current;
+    if (!el) return;
+    el.muted = !el.muted;
+    setTrailerMuted(el.muted);
   };
-  const startDownload = downloadFor(platform);
 
-  const heroMove = (event: MouseEvent<HTMLElement>) => {
-    const rect = event.currentTarget.getBoundingClientRect();
-    event.currentTarget.style.setProperty('--mouse-x', `${((event.clientX - rect.left) / rect.width - .5) * 16}px`);
-    event.currentTarget.style.setProperty('--mouse-y', `${((event.clientY - rect.top) / rect.height - .5) * 10}px`);
+  const restartTrailer = () => {
+    const el = trailerVideoRef.current;
+    if (!el) return;
+    el.currentTime = 0;
+    el.play().catch(() => {});
+    setTrailerPlaying(true);
+  };
+
+  const requestFullscreen = () => {
+    const el = trailerVideoRef.current;
+    if (!el) return;
+    if (el.requestFullscreen) {
+      el.requestFullscreen().catch(() => {});
+    } else if ((el as any).webkitRequestFullscreen) {
+      (el as any).webkitRequestFullscreen();
+    }
+  };
+
+  const handleTimeUpdate = () => {
+    const el = trailerVideoRef.current;
+    if (!el || !el.duration) return;
+    setTrailerProgress((el.currentTime / el.duration) * 100);
+  };
+
+  const handleProgressClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    const el = trailerVideoRef.current;
+    if (!el || !el.duration) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const pos = (e.clientX - rect.left) / rect.width;
+    el.currentTime = Math.max(0, Math.min(pos * el.duration, el.duration));
+  };
+
+  /* Klavye Gezinmesi */
+  const handleCharacterKey = (e: KeyboardEvent) => {
+    if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+      setCharacterKey((prev) => (prev === 'warrior' ? 'ninja' : 'warrior'));
+    }
+  };
+
+  const handleSpecialtyKey = (e: KeyboardEvent, index: number) => {
+    if (e.key === 'ArrowRight') {
+      const next = (index + 1) % SPECIALTY_KEYS.length;
+      setSpecialtyKey(SPECIALTY_KEYS[next]);
+    } else if (e.key === 'ArrowLeft') {
+      const prev = (index - 1 + SPECIALTY_KEYS.length) % SPECIALTY_KEYS.length;
+      setSpecialtyKey(SPECIALTY_KEYS[prev]);
+    } else if (e.key === 'Home') {
+      setSpecialtyKey(SPECIALTY_KEYS[0]);
+    } else if (e.key === 'End') {
+      setSpecialtyKey(SPECIALTY_KEYS[SPECIALTY_KEYS.length - 1]);
+    }
+  };
+
+  /* Form Gönderimi */
+  const handleFormSubmit = (e: FormEvent) => {
+    e.preventDefault();
+    const cleanNick = nickname.trim();
+    if (cleanNick.length < 2) return;
+    try {
+      localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify({
+          nickname: cleanNick,
+          email: email.trim(),
+          specialty: formSpecialty,
+          savedAt: new Date().toISOString(),
+        }),
+      );
+      setFormResult(
+        `${cleanNick}, taslak başvurun bu tarayıcıya kaydedildi. Gerçek bir kayıt veya e-posta gönderimi yapılmadı.`,
+      );
+      setHasSavedApplication(true);
+    } catch {
+      setFormResult(
+        'Tarayıcı kayıt izni vermedi. Başvurun kaydedilemedi; hiçbir bilgi sunucuya gönderilmedi.',
+      );
+    }
+  };
+
+  const handleClearApplication = () => {
+    try {
+      localStorage.removeItem(STORAGE_KEY);
+      setNickname('');
+      setEmail('');
+      setFormSpecialty('');
+      setAcknowledge(false);
+      setHasSavedApplication(false);
+      setFormResult('Bu tarayıcıdaki taslak başvurun silindi.');
+    } catch {
+      setFormResult('Tarayıcı kaydı silinemedi.');
+    }
   };
 
   return (
-    <div className="marketing-site">
-      <a className="skip-link" href="#main">İçeriğe geç</a>
-      <header className="site-header" id="top">
-        <a href="#top" aria-label="Kale Savaşları ana sayfa"><Brand /></a>
-        <nav className="desktop-nav" aria-label="Ana menü"><a href="#oyun">OYUN</a><a href="#dunya">DÜNYA</a><a href="#goruntuler">GÖRÜNTÜLER</a><a href="#indir">İNDİR</a></nav>
-        <a className="header-action" href={downloadUrl} onClick={startDownload}>OYUNU İNDİR <span aria-hidden>↓</span></a>
-        <button className="menu-toggle" type="button" aria-label={menuOpen ? 'Menüyü kapat' : 'Menüyü aç'} aria-controls="mobile-menu" aria-expanded={menuOpen} onClick={() => setMenuOpen(v => !v)}><span /><span /><span /></button>
-        <nav className="mobile-nav" id="mobile-menu" aria-label="Mobil menü" hidden={!menuOpen}><a href="#oyun" onClick={() => setMenuOpen(false)}>OYUN</a><a href="#dunya" onClick={() => setMenuOpen(false)}>DÜNYA</a><a href="#goruntuler" onClick={() => setMenuOpen(false)}>GÖRÜNTÜLER</a><a className="mobile-download" href={downloadUrl} onClick={startDownload}>OYUNU İNDİR ↓</a></nav>
+    <div className="landing-campaign">
+      <a className="skip-link" href="#main">
+        İçeriğe geç
+      </a>
+
+      {/* Üst Başlık (Header) */}
+      <header className="header" id="top">
+        <a href="#" className="wordmark" aria-label="KALE2 ana sayfa">
+          KALE<span>2</span>
+          <i aria-hidden="true">◆</i>
+        </a>
+        <nav
+          className={`navigation ${menuOpen ? 'open' : ''}`}
+          id="navigation"
+          aria-label="Ana menü"
+        >
+          <a href="#savas" onClick={() => setMenuOpen(false)}>
+            Oyun
+          </a>
+          <a href="#fragman" onClick={() => setMenuOpen(false)}>
+            Fragman
+          </a>
+          <a href="#karakterler" onClick={() => setMenuOpen(false)}>
+            Karakterler
+          </a>
+          <a href="#ganimet" onClick={() => setMenuOpen(false)}>
+            Ganimet
+          </a>
+          <a href="#galeri" onClick={() => setMenuOpen(false)}>
+            Dünyayı keşfet
+          </a>
+          <Link to="/wiki" onClick={() => setMenuOpen(false)}>
+            Wiki
+          </Link>
+        </nav>
+        <a href="#gelecek" className="nav-cta">
+          TESTE KATIL <span aria-hidden="true">↗</span>
+        </a>
+        <button
+          type="button"
+          className="menu-toggle"
+          aria-controls="navigation"
+          aria-expanded={menuOpen}
+          aria-label={menuOpen ? 'Menüyü kapat' : 'Menüyü aç'}
+          onClick={() => setMenuOpen(!menuOpen)}
+        >
+          <span />
+          <span />
+        </button>
       </header>
 
       <main id="main">
-        <section className="hero" aria-labelledby="hero-title" onMouseMove={heroMove}>
-          {!heroVideoFailed && HERO_VIDEO_SRC ? (
-            <div className="hero-video" aria-hidden>
-              <video
-                ref={heroVideoElRef}
-                className="hero-video-media"
-                src={HERO_VIDEO_SRC}
-                poster={HERO_VIDEO_POSTER}
-                autoPlay
-                muted
-                loop
-                playsInline
-                preload="auto"
-                tabIndex={-1}
-                onError={() => setHeroVideoFailed(true)}
-              />
-            </div>
-          ) : null}
-          <div
-            className={`hero-image hero-image-fallback${heroVideoFailed ? ' hero-image-fallback--visible' : ''}`}
-            role="img"
-            aria-label="Kale Savaşları oyun görüntüsü"
+        {/* Hero Bölümü - Arkaplan Görseli (Eskiden olduğu gibi website tasarımı) */}
+        <section className="hero" aria-labelledby="hero-title">
+          <img
+            className="hero-art"
+            src="/assets/campaign/hero.webp"
+            alt="Dağların ve kadim kalelerin önünde zırhlı fantastik savaşçılar"
+            width={1672}
+            height={941}
+            fetchPriority="high"
           />
-          <div className="hero-runes" aria-hidden><i /><i /><i /></div>
-          <div className="hero-content page-width">
-            <div className="eyebrow hero-eyebrow"><span className="eyebrow-line" /> TAKIMINI TOPLA. KALEYİ ELE GEÇİR.</div>
-            <h1 id="hero-title" className="hero-mark"><span className="hero-versus">5-5</span><span className="hero-mark__title">KALE <i>/</i> SAVAŞI</span></h1>
-            <div className="battle-facts" aria-label="Oyun özellikleri"><span className="match-time"><strong>30</strong> DAKİKA</span><span className="fair-play">PAY2WIN <b aria-label="yok">✕</b></span></div>
-            <p className="loot-line">BOSS <i>/</i> METİN <i>/</i> SANDIK <i>/</i> ŞANS</p>
-            <p className="hero-motto">İyi olan kazansın<span>.</span></p>
-            <div className="hero-actions"><a className="button button-primary" href={downloadUrl} onClick={startDownload}><span>ÜCRETSİZ İNDİR</span><span aria-hidden>↓</span></a><a className="text-link" href="#indir"><span className="play-symbol" aria-hidden>▶</span> NASIL KURULUR</a></div>
+          <div className="hero-shade" />
+          <div className="hero-grid" aria-hidden="true" />
+          <div className="hero-content">
+            <p className="eyebrow">
+              <span className="live-dot" /> YENİ BİR REKABETİN EŞİĞİNDE
+            </p>
+            <h1 id="hero-title">
+              ZAFERİN
+              <br />
+              BİR <em>BEDELİ</em>
+              <br />
+              VAR<span className="title-dot">.</span>
+            </h1>
+            <p className="hero-description">
+              Ganimetin peşine düş. Takımını topla.
+              <br />
+              Son sözü rakibin kalesinde söyle.
+            </p>
+            <div className="hero-actions">
+              <a className="button button-red" href="#savas">
+                SAVAŞI KEŞFET <span aria-hidden="true">↗</span>
+              </a>
+              <a className="button button-ghost" href="#fragman">
+                <span className="play-icon" aria-hidden="true">▶</span> FRAGMANI İZLE
+              </a>
+            </div>
           </div>
-          <div className="hero-bottom page-width"><span>5 OYUNCU <i /> 30 DAKİKA <i /> TEK HEDEF: ZAFER</span><a href="#oyun">SAVAŞI KEŞFET <span aria-hidden>↓</span></a></div>
+          <div className="hero-aside">
+            <span>
+              DOĞU'NUN EFSANESİ.
+              <br />
+              YENİ BİR SAVAŞ.
+            </span>
+            <div className="vertical-line" />
+            <span>01 / KALE2</span>
+          </div>
+          <div className="hero-footer">
+            <a className="scroll-cue" href="#savas">
+              <span aria-hidden="true">↓</span> DAHA DERİNE İN
+            </a>
+            <span className="concept-caption">KALE2 EVRENİ / KONSEPT GÖRSEL</span>
+            <span className="development">
+              <span className="live-dot" /> GELİŞTİRİLİYOR
+            </span>
+          </div>
         </section>
 
-        <section className="opening" aria-labelledby="opening-title">
-          <p className="opening-badge">KALE SAVAŞLARI · RESMİ SUNUCU</p>
-          <h2 id="opening-title"><span>18 EKİM</span> PAZAR</h2>
-          <p className="opening-status">AÇILIYOR</p>
-          <div className="opening-actions">
-            <a className="opening-btn opening-btn-solid" href={downloadUrl} onClick={startDownload}>OYUNU İNDİR</a>
-            <a className="opening-btn opening-btn-ghost" href="#oyun">OYUN TANITIMI</a>
+        {/* Bilgi Şeridi */}
+        <div className="fact-strip" aria-label="Oyun hedefleri">
+          <div>
+            <strong>
+              5<span>v</span>5
+            </strong>
+            <small>TAKIMINI TOPLA</small>
+          </div>
+          <span className="fact-divider">✦</span>
+          <div>
+            <strong>
+              15–25 <span>DK</span>
+            </strong>
+            <small>HER AN BİR FIRSAT</small>
+          </div>
+          <span className="fact-divider">✦</span>
+          <div>
+            <strong>TEK KALE</strong>
+            <small>TEK BÜYÜK HEDEF</small>
+          </div>
+          <p>
+            FANTASTİK BİR DÜNYA.
+            <br />
+            <b>REKABETİN YENİ CEPHESİ.</b>
+          </p>
+        </div>
+
+        {/* 01 / Savaşın Kuralları */}
+        <section className="intro section-pad" id="savas">
+          <div className="section-kicker">
+            <span>01 / SAVAŞIN KURALLARI</span>
+            <span>AKLINI DA KUŞAN.</span>
+          </div>
+          <div className="intro-heading">
+            <h2>
+              HER HAMLE
+              <br />
+              BİR <em>HİKÂYE.</em>
+            </h2>
+            <p>
+              Bir an avcısın. Bir an av.
+              <br />
+              KALE2; kale kuşatmasını, karakter ustalığını ve ganimet heyecanını
+              aynı savaş alanında buluşturmak için geliştiriliyor.
+            </p>
+          </div>
+          <div className="story-grid">
+            <article
+              className="story story-large"
+              role="button"
+              tabIndex={0}
+              style={{ cursor: 'zoom-in' }}
+              onClick={() => setLightboxIndex(1)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  setLightboxIndex(1);
+                }
+              }}
+            >
+              <img
+                src="/assets/campaign/battle.webp"
+                alt="KALE2 koridorlarında takım savaşı hazırlığı"
+                loading="lazy"
+                width={1536}
+                height={864}
+              />
+              <div className="story-overlay" />
+              <span className="image-index">I</span>
+              <div className="story-copy">
+                <p className="eyebrow">TAKIMIN KADAR GÜÇLÜSÜN</p>
+                <h3>
+                  BEŞ KİŞİ.
+                  <br />
+                  TEK BİR AMAÇ.
+                </h3>
+                <p>
+                  Koridoru it. Rakibi kıskaca al. Boss'a giden takımın boş
+                  bıraktığı kuleye yüklen. Kaleyi alan, maçı alır.
+                </p>
+              </div>
+            </article>
+            <article
+              className="story story-small"
+              role="button"
+              tabIndex={0}
+              style={{ cursor: 'zoom-in' }}
+              onClick={() => setLightboxIndex(4)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  setLightboxIndex(4);
+                }
+              }}
+            >
+              <img
+                src="/assets/campaign/sunset.webp"
+                alt="Gün batımında yüksek bir noktadan savaş alanını izleyen karakter"
+                loading="lazy"
+                width={1536}
+                height={864}
+              />
+              <div className="story-overlay" />
+              <span className="image-index">II</span>
+              <div className="story-copy">
+                <p className="eyebrow">DOĞRU YER. DOĞRU AN.</p>
+                <h3>
+                  AVLA.
+                  <br />
+                  YA DA SIYRIL.
+                </h3>
+                <p>
+                  Bir pusu, kusursuz bir kaçış, son anda gelen bir dost. Savaşın
+                  yönünü değiştiren o anı yakala.
+                </p>
+              </div>
+            </article>
           </div>
         </section>
 
-        <section className="intro-section section-shell" id="oyun" aria-labelledby="intro-title"><div className="page-width reveal"><div className="section-label"><span>01</span> / OYUNUN ÖZÜ</div><div className="intro-grid"><div><h2 id="intro-title">BEŞE BEŞ.<br /><span>OMUZ OMUZA.</span><br />KALEYE KADAR.</h2></div><div className="intro-right"><p>Kale Savaşları bir MOBA: beşe beş, yollar, kuleler ve iki kale. Yolunu seç, haritadaki hedefleri kır ve rakip kaleye kadar omuz omuza ilerle.</p><a className="inline-link" href="#dunya">SAVAŞ ALANINI İNCELE <span aria-hidden>↗</span></a></div></div><figure className="moba-map"><button className="open-image" type="button" onClick={() => setPreview({ src: '/assets/moba-map.jpg', caption: '5-5 savaş haritası: kaleler, yollar ve hedefler' })} aria-label="5-5 savaş haritasını büyüt"><img src="/assets/moba-map.jpg" alt="İki kale, yollar, minyonlar ve boss noktalarını gösteren savaş haritası" width={1024} height={579} loading="lazy" /><span className="image-tag">5-5 SAVAŞ HARİTASI</span><span className="zoom-corner" aria-hidden>↗</span></button></figure><div className="feature-grid"><article className="feature"><span className="feature-number">01</span><span className="feature-icon" aria-hidden>⚔</span><h3>5-5 KALE SAVAŞI</h3><p>Yolları kontrol et, kuleleri aş ve rakibin kalesine ulaş.</p></article><article className="feature"><span className="feature-number">02</span><span className="feature-icon" aria-hidden>◆</span><h3>BOSS / METİN / SANDIK</h3><p>Savaş alanındaki taşları kır, güç kazan ve gidişatı değiştir.</p></article><article className="feature"><span className="feature-number">03</span><span className="feature-icon" aria-hidden>♜</span><h3>30 DAKİKA. TAM REKABET.</h3><p>Pay2Win yok. Takım oyunun, kararların ve biraz da şansın konuşsun.</p></article></div></div></section>
+        {/* Video Bölümü — "BİR MAÇ. BİN İHTİMAL." */}
+        <section className="trailer-section" id="fragman">
+          <div className="section-pad" style={{ paddingBottom: '35px' }}>
+            <div className="section-kicker">
+              <span>RESMİ FRAGMAN / KALE2</span>
+              <span>OYUN İÇİ GÖRÜNTÜLER</span>
+            </div>
+            <div className="gallery-heading">
+              <h2>
+                BİR MAÇ.
+                <br />
+                <em>BİN İHTİMAL.</em>
+              </h2>
+              <span>
+                Avı başlatan sen ol.
+                <br />
+                Son hamleyi de sen yap.
+              </span>
+            </div>
+          </div>
 
-        <section className="showcase-section" aria-labelledby="showcase-title"><div className="showcase-photo" /><div className="page-width showcase-content"><div className="showcase-copy reveal"><div className="section-label"><span>02</span> / SAHAYA İN</div><h2 id="showcase-title">HER YOL<br /><em>BİR SEÇİM.</em><br />HER SEÇİM<br />BİR SAVAŞ.</h2><p>Alıştığın dünyaya başka bir gözle bak. Köprüyü tut, ormanda izini kaybettir ya da tehlikeyi göze alıp gizli geçitten ilerle.</p><a className="button button-outline" href="#goruntuler">OYUNU GÖRÜNTÜLE <span aria-hidden>↗</span></a></div></div><div className="photo-credit">OYUN İÇİ GÖRÜNTÜ / GELİŞTİRME SÜRÜMÜ</div></section>
+          {/* Tam Ekran / Fullscreen Video Alanı */}
+          <div className="trailer-fs-stage">
+            <video
+              ref={trailerVideoRef}
+              className="trailer-fs-video"
+              src={HERO_VIDEO_SRC}
+              poster="/assets/campaign/battle.webp"
+              autoPlay
+              muted={trailerMuted}
+              loop
+              playsInline
+              preload="auto"
+              onTimeUpdate={handleTimeUpdate}
+            />
+            <div className="trailer-fs-shade" />
+            <div className="trailer-fs-grid" aria-hidden="true" />
 
-        <section className="world-section section-shell" id="dunya" aria-labelledby="world-title"><div className="page-width reveal"><div className="section-label"><span>03</span> / DÜNYA</div><div className="world-heading"><h2 id="world-title">HARİTANIN HER KÖŞESİ<br /><span>BAŞKA BİR MÜCADELE.</span></h2><p>Savaş alanı tek bir yol değil. Her bölge farklı bir risk, farklı bir fırsat taşıyor.</p></div><div className="world-panel"><button className="world-art open-image" type="button" onClick={() => setPreview({ src: '/assets/world-concept.webp', caption: 'Dünya haritası konsepti' })} aria-label="Dünya haritası konseptini büyüt"><img src="/assets/world-concept.webp" alt="İki kale ve farklı biyomları gösteren dünya haritası konsepti" loading="lazy" /><span className="image-tag">DÜNYA HARİTASI KONSEPTİ</span><span className="zoom-corner" aria-hidden>↗</span></button><div className="world-info"><span className="world-index">KEŞFEDİLECEK BÖLGELER / 05</span><div className="region-list" role="tablist" aria-label="Bölgeler">{regions.map((region, index) => <button key={region.id} className={`region ${index === regionIndex ? 'active' : ''}`} type="button" role="tab" id={`region-${region.id}`} aria-controls="region-panel" aria-selected={index === regionIndex} tabIndex={index === regionIndex ? 0 : -1} onClick={() => chooseRegion(index)} onKeyDown={e => regionKey(e, index)}><span>{String(index + 1).padStart(2, '0')}</span> {region.name} <b aria-hidden>↗</b></button>)}</div><div className="region-detail" id="region-panel" role="tabpanel" aria-labelledby={`region-${selectedRegion.id}`} tabIndex={0}><span>{selectedRegion.type}</span><h3>{selectedRegion.name}</h3><p>{selectedRegion.description}</p></div></div></div></div></section>
+            {/* Orta Oynat / Durdur Butonu */}
+            <button
+              type="button"
+              className={`trailer-fs-center-btn ${!trailerPlaying ? 'is-paused' : ''}`}
+              onClick={toggleTrailerPlay}
+              aria-label={trailerPlaying ? 'Videoyu duraklat' : 'Videoyu oynat'}
+            >
+              <span>{trailerPlaying ? '⏸' : '▶'}</span>
+            </button>
 
-        <section className="gallery-section section-shell" id="goruntuler" aria-labelledby="gallery-title"><div className="page-width reveal"><div className="section-label"><span>04</span> / OYUN İÇİ GÖRÜNTÜLER</div><div className="gallery-heading"><h2 id="gallery-title">DÜNYANIN <span>İÇİNDEN.</span></h2><p>Geliştirme sürümünden gerçek oyun görüntüleri.</p></div><div className="gallery-grid"><button className="gallery-card open-image" type="button" onClick={() => setPreview({ src: '/assets/gameplay-warrior.webp', caption: 'Savaşçı ve açık alan — oyun içi görüntü' })}><img src="/assets/gameplay-warrior.webp" alt="Savaşçı karakterin yeşil vadide ilerlediği oyun içi görüntü" loading="lazy" /><span className="gallery-caption"><small>OYUN İÇİ / 01</small><strong>SAVAŞÇININ YOLU</strong></span><span className="gallery-arrow" aria-hidden>↗</span></button><button className="gallery-card open-image" type="button" onClick={() => setPreview({ src: '/assets/gameplay-battlefield.webp', caption: 'Kızıl orman — oyun içi görüntü' })}><img src="/assets/gameplay-battlefield.webp" alt="Kızıl ormandaki yolun oyun içi görüntüsü" loading="lazy" /><span className="gallery-caption"><small>OYUN İÇİ / 02</small><strong>KIZIL ORMAN</strong></span><span className="gallery-arrow" aria-hidden>↗</span></button></div></div></section>
+            {/* Alt Kontrol Barı (HUD) */}
+            <div className="trailer-fs-hud">
+              <div className="trailer-fs-info">
+                <span className="live-dot" />
+                <div>
+                  <strong>SAVAŞIN İÇİNE GİR</strong>
+                  <small>KALE2 RESMİ OYUN İÇİ FRAGMAN</small>
+                </div>
+              </div>
 
-        <section className="download-section section-shell" id="indir" aria-labelledby="download-title"><div className="page-width reveal"><div className="section-label"><span>05</span> / OYUNU İNDİR</div><div className="download-grid"><div className="download-copy"><h2 id="download-title">SAVAŞA<br /><span>KATIL.</span></h2><p>Kale Savaşları’nın geliştirme sürümünü ücretsiz indir ve savaş alanına ilk adımını at. Dosya tek tıkla, doğrudan iner.</p><div className="download-actions">{PLATFORMS.map((p) => <a key={p} className={`button ${p === platform ? 'button-primary' : 'button-outline'}`} href={urlFor(p)} onClick={downloadFor(p)}><span>{PLATFORM_NAME[p]} İÇİN İNDİR</span><span aria-hidden>↓</span></a>)}</div><p className="download-meta">{latest ? `SÜRÜM ${latest.version}${currentBuild ? ` · ${formatSize(currentBuild.size)}` : ''} · ` : ''}{PLATFORM_NAME[platform]} · ZIP</p></div><div><div className="platform-tabs" role="tablist" aria-label="Kurulum adımları">{PLATFORMS.map((p) => <button key={p} type="button" role="tab" aria-selected={p === platform} className={p === platform ? 'active' : ''} onClick={() => setPlatform(p)}>{PLATFORM_NAME[p]}</button>)}</div><ol className="download-steps">{installSteps[platform].map((step, i) => <li key={step.title}><span>{String(i + 1).padStart(2, '0')}</span><div><h3>{step.title}</h3><p>{step.text}</p></div></li>)}</ol></div></div></div></section>
+              <div className="trailer-fs-controls">
+                <button
+                  type="button"
+                  className="trailer-hud-btn"
+                  onClick={toggleTrailerPlay}
+                >
+                  {trailerPlaying ? '⏸ DURDUR' : '▶ OYNAT'}
+                </button>
+                <button
+                  type="button"
+                  className={`trailer-hud-btn ${!trailerMuted ? 'active-audio' : ''}`}
+                  onClick={toggleTrailerMute}
+                >
+                  {trailerMuted ? '🔇 SESİ AÇ' : '🔊 SES AÇIK'}
+                </button>
+                <button
+                  type="button"
+                  className="trailer-hud-btn"
+                  onClick={restartTrailer}
+                >
+                  ↺ BAŞTAN
+                </button>
+                <button
+                  type="button"
+                  className="trailer-hud-btn trailer-hud-primary"
+                  onClick={requestFullscreen}
+                >
+                  ⛶ TAM EKRAN
+                </button>
+              </div>
 
-        <section className="closing-section" aria-labelledby="closing-title"><div className="page-width closing-content reveal"><div className="section-label"><span>06</span> / SAVAŞ ÇAĞRISI</div><h2 id="closing-title">İYİ OLAN<br /><em>KAZANSIN.</em></h2><p>Kale Savaşları geliştirme aşamasında. Oyunu indir, arkadaşlarını da bu dünyaya çağır.</p><div className="closing-actions"><a className="button button-primary" href={downloadUrl} onClick={startDownload}><span>OYUNU İNDİR</span><span aria-hidden>↓</span></a><button className="button button-outline share-button" type="button" onClick={share}>SAYFAYI PAYLAŞ <span aria-hidden>↗</span></button><a className="text-link" href="#top">BAŞA DÖN <span aria-hidden>↑</span></a></div><p className="share-status" role="status" aria-live="polite">{shareStatus}</p></div></section>
+              {/* İlerleme Çubuğu */}
+              <div
+                className="trailer-fs-progress-track"
+                onClick={handleProgressClick}
+                role="slider"
+                aria-label="Video ilerleme çubuğu"
+                aria-valuenow={Math.round(trailerProgress)}
+                tabIndex={0}
+              >
+                <div
+                  className="trailer-fs-progress-bar"
+                  style={{ width: `${trailerProgress}%` }}
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="section-pad" style={{ paddingTop: '25px', paddingBottom: '30px' }}>
+            <div className="trailer-chapters">
+              <span>01 / GÖZETLE</span>
+              <span>02 / YAKALA</span>
+              <span>03 / GANİMETİ KORU</span>
+              <span>04 / KALEYİ AL</span>
+            </div>
+          </div>
+        </section>
+
+        {/* 02 / Karakterler */}
+        <section className="characters section-pad" id="karakterler">
+          <div className="section-kicker">
+            <span>02 / TARZINI SEÇ</span>
+            <span>İKİ KARAKTER. DÖRT YOL.</span>
+          </div>
+          <div className="character-layout">
+            <div className="character-info">
+              <h2>
+                SAVAŞTA
+                <br />
+                <em>İZ BIRAK.</em>
+              </h2>
+              <div
+                className="character-tabs"
+                role="tablist"
+                aria-label="Karakter seçimi"
+              >
+                <button
+                  type="button"
+                  id="tab-warrior"
+                  role="tab"
+                  aria-selected={characterKey === 'warrior'}
+                  aria-controls="character-panel"
+                  tabIndex={characterKey === 'warrior' ? 0 : -1}
+                  onClick={() => setCharacterKey('warrior')}
+                  onKeyDown={handleCharacterKey}
+                >
+                  01 <span>SAVAŞÇI</span>
+                </button>
+                <button
+                  type="button"
+                  id="tab-ninja"
+                  role="tab"
+                  aria-selected={characterKey === 'ninja'}
+                  aria-controls="character-panel"
+                  tabIndex={characterKey === 'ninja' ? 0 : -1}
+                  onClick={() => setCharacterKey('ninja')}
+                  onKeyDown={handleCharacterKey}
+                >
+                  02 <span>NİNJA</span>
+                </button>
+              </div>
+              <div
+                id="character-panel"
+                role="tabpanel"
+                aria-labelledby={`tab-${characterKey}`}
+                tabIndex={0}
+              >
+                <p className="eyebrow" id="character-role">
+                  {character.role}
+                </p>
+                <h3 id="character-name">{character.name}</h3>
+                <p id="character-description">{character.description}</p>
+                <div className="paths" id="character-paths">
+                  {character.paths.map((p) => (
+                    <span key={p}>{p}</span>
+                  ))}
+                </div>
+                <p className="character-note">
+                  Uzmanlığını maç başında seç.
+                  <br />
+                  Beş yeteneğini seviye kazandıkça aç.
+                </p>
+              </div>
+            </div>
+            <div
+              className="character-visual"
+              role="button"
+              tabIndex={0}
+              style={{ cursor: 'zoom-in' }}
+              title="Karakter görselini büyütmek için tıkla"
+              onClick={() => setLightboxIndex(characterKey === 'warrior' ? 6 : 7)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  setLightboxIndex(characterKey === 'warrior' ? 6 : 7);
+                }
+              }}
+            >
+              <div className="character-ring" aria-hidden="true" />
+              <span
+                className="giant-letter"
+                aria-hidden="true"
+                id="character-letter"
+              >
+                {character.letter}
+              </span>
+              <img
+                id="character-image"
+                src={character.image}
+                width={640}
+                height={900}
+                alt={character.alt}
+                loading="lazy"
+                data-class={characterKey}
+              />
+              <span className="visual-label" id="character-image-label">
+                {character.label}
+              </span>
+              <span className="visual-corner" aria-hidden="true">
+                ✦
+              </span>
+            </div>
+          </div>
+        </section>
+
+        {/* Uzmanlıklar */}
+        <section className="specializations section-pad" id="uzmanliklar">
+          <div className="section-kicker">
+            <span>UZMANLIĞINI KEŞFET</span>
+            <span>YETENEK İSİMLERİ VE ROLLERİ TANITIM TASLAĞIDIR</span>
+          </div>
+          <div className="intro-heading">
+            <h2>
+              AYNI CEPHE.
+              <br />
+              <em>BAŞKA BİR YOL.</em>
+            </h2>
+            <p>
+              Maç başında yolunu seç. Takımının ihtiyacına cevap ver.
+              <br />
+              Aşağıdaki yetenek örnekleri taslak içeriktir; nihai oyun dengesi
+              ve yetenekler değişebilir.
+            </p>
+          </div>
+          <div className="specialty-tabs" role="tablist" aria-label="Uzmanlıklar">
+            <button
+              type="button"
+              role="tab"
+              id="spec-bedensel"
+              aria-selected={specialtyKey === 'bedensel'}
+              aria-controls="specialty-panel"
+              tabIndex={specialtyKey === 'bedensel' ? 0 : -1}
+              onClick={() => setSpecialtyKey('bedensel')}
+              onKeyDown={(e) => handleSpecialtyKey(e, 0)}
+            >
+              01 <b>BEDENSEL</b>
+              <small>SAVAŞÇI</small>
+            </button>
+            <button
+              type="button"
+              role="tab"
+              id="spec-zihinsel"
+              aria-selected={specialtyKey === 'zihinsel'}
+              aria-controls="specialty-panel"
+              tabIndex={specialtyKey === 'zihinsel' ? 0 : -1}
+              onClick={() => setSpecialtyKey('zihinsel')}
+              onKeyDown={(e) => handleSpecialtyKey(e, 1)}
+            >
+              02 <b>ZİHİNSEL</b>
+              <small>SAVAŞÇI</small>
+            </button>
+            <button
+              type="button"
+              role="tab"
+              id="spec-yakin"
+              aria-selected={specialtyKey === 'yakin'}
+              aria-controls="specialty-panel"
+              tabIndex={specialtyKey === 'yakin' ? 0 : -1}
+              onClick={() => setSpecialtyKey('yakin')}
+              onKeyDown={(e) => handleSpecialtyKey(e, 2)}
+            >
+              03 <b>YAKIN DÖVÜŞ</b>
+              <small>NİNJA</small>
+            </button>
+            <button
+              type="button"
+              role="tab"
+              id="spec-uzak"
+              aria-selected={specialtyKey === 'uzak'}
+              aria-controls="specialty-panel"
+              tabIndex={specialtyKey === 'uzak' ? 0 : -1}
+              onClick={() => setSpecialtyKey('uzak')}
+              onKeyDown={(e) => handleSpecialtyKey(e, 3)}
+            >
+              04 <b>UZAK DÖVÜŞ</b>
+              <small>NİNJA</small>
+            </button>
+          </div>
+          <div
+            className="specialty-panel"
+            id="specialty-panel"
+            role="tabpanel"
+            aria-labelledby={`spec-${specialtyKey}`}
+            tabIndex={0}
+          >
+            <div className="specialty-summary">
+              <p className="eyebrow" id="specialty-role">
+                {specialty.role}
+              </p>
+              <h3 id="specialty-title">{specialty.title}</h3>
+              <p id="specialty-description">{specialty.description}</p>
+              <div className="specialty-traits" id="specialty-traits">
+                {specialty.traits.map((trait) => (
+                  <span key={trait}>{trait}</span>
+                ))}
+              </div>
+              <p className="specialty-counter" id="specialty-counter">
+                {specialty.counter}
+              </p>
+            </div>
+            <ol className="skill-list" id="specialty-skills">
+              {specialty.skills.map(([title, desc], idx) => (
+                <li key={title}>
+                  <span>{String(idx + 1).padStart(2, '0')}</span>
+                  <div>
+                    <h4>{title}</h4>
+                    <p>{desc}</p>
+                  </div>
+                </li>
+              ))}
+            </ol>
+          </div>
+        </section>
+
+        {/* 03 / Ganimet */}
+        <section className="loot section-pad" id="ganimet">
+          <div className="section-kicker">
+            <span>03 / GANİMETİN BEDELİ</span>
+            <span>PLANLANAN BOSS DÖNGÜSÜ</span>
+          </div>
+          <div className="loot-layout">
+            <div className="loot-intro">
+              <p className="eyebrow">BOSS'U KESTİN. PEKİ YA SONRASI?</p>
+              <h2>
+                ŞİMDİ
+                <br />
+                <em>AV SENSİN.</em>
+              </h2>
+              <p>
+                Sandık sende. Gözler üzerinde.
+                <br />
+                Ödülünü açmadan önce takımınla birlikte 60 saniye hayatta
+                kalabilecek misin?
+              </p>
+              <div className="loot-rule">
+                <span aria-hidden="true">◇</span>
+                <p>
+                  Boss'a en çok hasarı veren takım sandığı kazanır.
+                  <br />
+                  <b>Ödülü korumak ise başka bir mücadele.</b>
+                </p>
+              </div>
+            </div>
+            <div className="relic-panel">
+              <div className="relic-topline">
+                <span>GANİMET TAŞIYICISI</span>
+                <span className="live-dot" />
+              </div>
+              <div className="chest-art" aria-hidden="true">
+                <div className="chest-rays" />
+                <svg viewBox="0 0 240 180" fill="none">
+                  <path
+                    d="M45 85V58Q45 26 77 26H165Q195 26 195 58V85"
+                    fill="#372d1e"
+                    stroke="#d9b779"
+                    strokeWidth="3"
+                  />
+                  <path
+                    d="M45 85H195V149H45z"
+                    fill="#32291f"
+                    stroke="#d9b779"
+                    strokeWidth="3"
+                  />
+                  <path
+                    d="M45 85L60 69H180L195 85M74 27V149M166 27V149M45 133H195"
+                    stroke="#a88146"
+                    strokeWidth="5"
+                  />
+                  <path d="M108 76H132V106H108z" fill="#d9b779" />
+                  <path d="M120 84V96" stroke="#302417" strokeWidth="4" />
+                  <path d="M45 111H195" stroke="#6f5736" strokeWidth="2" />
+                  <path
+                    d="M104 42L120 34L136 42L120 50z"
+                    fill="#e5c38c"
+                    opacity=".6"
+                  />
+                </svg>
+                <span className="relic-spark s1">✦</span>
+                <span className="relic-spark s2">✧</span>
+              </div>
+              <div className="countdown">
+                <span id="chest-time">
+                  00:{String(chestSeconds).padStart(2, '0')}
+                </span>
+                <small id="chest-status" aria-live="polite">
+                  {chestSeconds === 0
+                    ? 'SANDIK GÜVENDE. ÖDÜL SEÇİMİ SIRADA.'
+                    : chestRunning
+                      ? 'SANDIK SENDE. 60 SANİYE DAYAN.'
+                      : 'ÖDÜLÜNE GİDEN EN UZUN DAKİKA'}
+                </small>
+              </div>
+              <div className="timer-track">
+                <div
+                  id="timer-progress"
+                  style={{ width: `${((60 - chestSeconds) / 60) * 100}%` }}
+                />
+              </div>
+              <button
+                type="button"
+                className="button button-outline"
+                id="chest-demo"
+                onClick={toggleChestDemo}
+              >
+                {chestSeconds === 0
+                  ? 'YENİDEN DENE ↗'
+                  : chestRunning
+                    ? 'TANITIMI SIFIRLA ↺'
+                    : 'TAŞIYICI OL ↗'}
+              </button>
+              <p className="demo-caption">
+                Etkileşimli tanıtım · Oyun içi ödül vermez
+              </p>
+            </div>
+          </div>
+          <div className="loot-steps">
+            <div>
+              <span>01</span>
+              <h3>BOSS'U DEVİR</h3>
+              <p>
+                Takımınla aynı hedef için savaş. Koridorlarını gözden çıkarma.
+              </p>
+            </div>
+            <div>
+              <span>02</span>
+              <h3>SANDIĞI KORU</h3>
+              <p>
+                Düşersen sandık yerde kalır. Dostun da rakibin de alabilir.
+              </p>
+            </div>
+            <div>
+              <span>03</span>
+              <h3>GÜCÜNÜ GÖSTER</h3>
+              <p>
+                Ödülünü seç. Süreli gücün ve özel parlamanla cepheye dön.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        {/* 04 / Dünya */}
+        <section className="world section-pad" id="dunya">
+          <div className="section-kicker">
+            <span>04 / SAVAŞ ALANINI OKU</span>
+            <span>HER PATİKA BİR İHTİMAL.</span>
+          </div>
+          <div className="world-layout">
+            <div
+              className="world-map"
+              role="button"
+              tabIndex={0}
+              style={{ cursor: 'zoom-in' }}
+              onClick={() => setLightboxIndex(3)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  setLightboxIndex(3);
+                }
+              }}
+            >
+              <img
+                src="/assets/campaign/world.webp"
+                alt="İki kaleyi, orman yollarını ve tarafsız hedefleri gösteren konsept harita"
+                width={1358}
+                height={768}
+                loading="lazy"
+              />
+              <span className="map-caption">SAVAŞ ALANI / KONSEPT ÇALIŞMA (BÜYÜT ↗)</span>
+            </div>
+            <div className="world-copy">
+              <h2>
+                HARİTAYI KEŞFET
+                <br />
+                <em>MAÇI KAZAN</em>
+              </h2>
+              <p>
+                Yüksek patikalarda gözetle. Ormanda fırsat kolla. Rakip boss'la
+                uğraşırken kalbine ilerle.
+              </p>
+              <div className="world-feature">
+                <span>↗</span>
+                <div>
+                  <h3>YÜKSEKTEKİ AVANTAJ</h3>
+                  <p>
+                    Görüş kazan. Menzilini kullan. Ama arkandaki patikayı
+                    unutma.
+                  </p>
+                </div>
+              </div>
+              <div className="world-feature">
+                <span>◇</span>
+                <div>
+                  <h3>GERİ DÖNÜŞÜNÜ YARAT</h3>
+                  <p>
+                    Güçlü rakibi avla, takımına yardım et, boss zamanlamasını
+                    yakala.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* 05 / Galeri */}
+        <section className="gallery section-pad" id="galeri">
+          <div className="section-kicker">
+            <span>05 / CEPHEDEN GÖRÜNTÜLER</span>
+            <span>GERÇEK OYUN İÇİ KARELER</span>
+          </div>
+          <div className="gallery-heading">
+            <h2>
+              BU DÜNYANIN
+              <br />
+              <em>İÇİNE BAK.</em>
+            </h2>
+            <span>
+              Geliştirme sürümünden görüntüler.
+              <br />
+              Son görünüm değişebilir.
+            </span>
+          </div>
+          <div className="gallery-grid">
+            <button
+              type="button"
+              className="gallery-item gallery-main"
+              onClick={() => setLightboxIndex(0)}
+            >
+              <img
+                src="/assets/campaign/castle.webp"
+                alt="Gün ışığında KALE2 kalesi ve avlusu"
+                loading="lazy"
+                width={1536}
+                height={864}
+              />
+              <span>
+                <b>KALE KAPILARINDA</b>
+                <i aria-hidden="true">↗</i>
+              </span>
+            </button>
+            <button
+              type="button"
+              className="gallery-item"
+              onClick={() => setLightboxIndex(1)}
+            >
+              <img
+                src="/assets/campaign/battle.webp"
+                alt="Koridorda ilerleyen kahramanlar ve minyonlar"
+                loading="lazy"
+                width={1536}
+                height={864}
+              />
+              <span>
+                <b>CEPHEYE DOĞRU</b>
+                <i aria-hidden="true">↗</i>
+              </span>
+            </button>
+            <button
+              type="button"
+              className="gallery-item"
+              onClick={() => setLightboxIndex(2)}
+            >
+              <img
+                src="/assets/campaign/night.webp"
+                alt="Gece ışığında kale surları"
+                loading="lazy"
+                width={1536}
+                height={864}
+              />
+              <span>
+                <b>GECE NÖBETİ</b>
+                <i aria-hidden="true">↗</i>
+              </span>
+            </button>
+          </div>
+        </section>
+
+        {/* Başvuru / Teste Katıl */}
+        <section className="join section-pad" id="gelecek">
+          <div className="section-kicker">
+            <span>BİR SONRAKİ DALGADA YERİNİ AL</span>
+            <span>TEST BAŞVURUSU / TASLAK DENEYİM</span>
+          </div>
+          <div className="join-layout">
+            <div className="join-copy">
+              <p className="eyebrow">
+                <span className="live-dot" /> CEPHE BİRLİKTE ŞEKİLLENİYOR
+              </p>
+              <h2>
+                KALE BEKLER.
+                <br />
+                <em>SEN BEKLEME.</em>
+              </h2>
+              <p>
+                İlk çatışmaları dene. Karakterinin sınırlarını keşfet. Geri
+                bildiriminle savaşın geleceğine katkıda bulun.
+              </p>
+              <div className="join-benefit">
+                <b>01 / SAVAŞI DENE</b>
+                <span>Karakterler, koridorlar ve takım mücadeleleri.</span>
+              </div>
+              <div className="join-benefit">
+                <b>02 / SÖZÜNÜ SÖYLE</b>
+                <span>Yetenek hissi, ganimet heyecanı ve maç temposu.</span>
+              </div>
+              <div className="join-benefit">
+                <b>03 / TAKIMINI BUL</b>
+                <span>Toplulukta birlikte oynayacağın insanlarla buluş.</span>
+              </div>
+              <button
+                type="button"
+                className="button button-outline community-trigger"
+                onClick={() => setCommunityOpen(true)}
+              >
+                TOPLULUĞU KEŞFET <span aria-hidden="true">↗</span>
+              </button>
+              <p className="join-note">
+                Topluluk penceresi örnektir. Gerçek Discord bağlantısı daha sonra
+                eklenecek.
+              </p>
+            </div>
+            <form className="join-form" id="test-form" onSubmit={handleFormSubmit}>
+              <div className="form-heading">
+                <span>ERKEN TEST BAŞVURUSU</span>
+                <span className="mock-label">DEMO</span>
+              </div>
+              <h3>İLK ADIMI AT.</h3>
+              <p className="form-disclaimer">
+                Bu bir başvuru taslağıdır. Bilgiler yalnızca bu tarayıcıda
+                saklanır; sunucuya gönderilmez ve gerçek test sırası
+                oluşturulmaz.
+              </p>
+              <label htmlFor="player-name">
+                OYUNCU ADIN
+                <input
+                  id="player-name"
+                  name="nickname"
+                  autoComplete="nickname"
+                  placeholder="Savaş alanında hangi isimle tanınacaksın?"
+                  required
+                  minLength={2}
+                  maxLength={40}
+                  value={nickname}
+                  onChange={(e) => setNickname(e.target.value)}
+                />
+              </label>
+              <label htmlFor="player-email">
+                E-POSTA ADRESİN
+                <input
+                  id="player-email"
+                  name="email"
+                  type="email"
+                  autoComplete="email"
+                  placeholder="oyuncu@ornek.com"
+                  required
+                  maxLength={254}
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                />
+              </label>
+              <label htmlFor="player-path">
+                İLK TERCİHİN
+                <select
+                  id="player-path"
+                  name="specialty"
+                  required
+                  value={formSpecialty}
+                  onChange={(e) => setFormSpecialty(e.target.value)}
+                >
+                  <option value="">Yolunu seç</option>
+                  <option value="bedensel">Savaşçı / Bedensel</option>
+                  <option value="zihinsel">Savaşçı / Zihinsel</option>
+                  <option value="yakin">Ninja / Yakın dövüş</option>
+                  <option value="uzak">Ninja / Uzak dövüş</option>
+                  <option value="kararsiz">Henüz karar vermedim</option>
+                </select>
+              </label>
+              <label className="form-check">
+                <input
+                  type="checkbox"
+                  name="acknowledge"
+                  required
+                  checked={acknowledge}
+                  onChange={(e) => setAcknowledge(e.target.checked)}
+                />
+                <span>
+                  Bu formun demo olduğunu ve bilgilerin yalnızca bu tarayıcıda
+                  tutulacağını anladım.
+                </span>
+              </label>
+              <button type="submit" className="button button-red">
+                TASLAK BAŞVURUMU KAYDET <span aria-hidden="true">↗</span>
+              </button>
+              {formResult && (
+                <p className="form-result" id="form-result" role="status">
+                  {formResult}
+                </p>
+              )}
+              {hasSavedApplication && (
+                <button
+                  type="button"
+                  className="clear-application"
+                  onClick={handleClearApplication}
+                >
+                  Bu tarayıcıdaki başvuruyu sil
+                </button>
+              )}
+            </form>
+          </div>
+        </section>
+
+        {/* SSS / FAQ */}
+        <section className="faq section-pad" id="sorular">
+          <div>
+            <p className="eyebrow">CEPHEDEN ÖNCE</p>
+            <h2>
+              AKLINDA
+              <br />
+              <em>KALMASIN.</em>
+            </h2>
+          </div>
+          <div className="faq-list">
+            <details>
+              <summary>
+                KALE2 nasıl bir oyun?<span>+</span>
+              </summary>
+              <p>
+                Fantastik bir dünyada 5v5 kale savaşı. Takımınla koridorlara baskı
+                kur, boss ganimetleri için risk al ve rakip kaleyi ele geçir.
+                Hedef maç süresi 15–25 dakika.
+              </p>
+            </details>
+            <details>
+              <summary>
+                Ne zaman oynayabileceğim?<span>+</span>
+              </summary>
+              <p>
+                Oyun geliştirme aşamasında. Çıkış ve test takvimi henüz
+                açıklanmadı. Buradaki başvuru formu ve topluluk ekranı tanıtım
+                taslaklarıdır.
+              </p>
+            </details>
+            <details>
+              <summary>
+                Maçta kazandığım güç sonraki maça taşınır mı?<span>+</span>
+              </summary>
+              <p>
+                Mevcut tasarımda her maç seviye, ekipman ve yükseltmeler
+                sıfırlanır. Köy karakterinin ilerleyişi ayrı tutulur.
+              </p>
+            </details>
+            <details>
+              <summary>
+                Boss sandığı neden önemli?<span>+</span>
+              </summary>
+              <p>
+                En çok toplam hasarı veren takım sandık hakkını kazanır. Sandık
+                ilk kez envantere girdiğinde 60 saniyelik süre başlar. Taşıyıcı
+                düşerse sandığı dost da rakip de alabilir. Koruma süresini
+                tamamlayan taşıyıcı ödülünü seçer.
+              </p>
+            </details>
+            <details>
+              <summary>
+                Güç satın alarak avantaj sağlanacak mı?<span>+</span>
+              </summary>
+              <p>
+                Tasarım ilkemiz Pay2Win olmaması. Güç farkı maç içindeki
+                gelişim, ganimet ve takım kararlarından doğmalı. Ticari modelin
+                ayrıntıları henüz belirlenmedi.
+              </p>
+            </details>
+          </div>
+        </section>
       </main>
 
-      <footer className="footer"><div className="page-width footer-inner"><a href="#top"><Brand /></a><span>© {new Date().getFullYear()} Kale Savaşları. GELİŞTİRME SÜRÜMÜ.</span><a href="#top">YUKARI DÖN ↑</a></div></footer>
-      <dialog ref={dialogRef} className="image-dialog" aria-label="Görsel önizleme" onClose={() => setPreview(null)} onClick={(e) => { if (e.target === dialogRef.current) setPreview(null); }}><button className="dialog-close" type="button" aria-label="Görseli kapat" onClick={() => setPreview(null)}>×</button>{preview && <><img src={preview.src} alt={preview.caption} /><p>{preview.caption}</p></>}</dialog>
+      {/* Alt Bilgi (Footer) */}
+      <footer className="footer">
+        <a href="#top" className="wordmark" aria-label="Başa dön">
+          KALE<span>2</span>
+          <i aria-hidden="true">◆</i>
+        </a>
+        <p>GANİMET. TAKIM. ZAFER.</p>
+        <span>
+          © 2026 KALE2 <span className="footer-separator">/</span> Geliştirme
+          aşamasında
+        </span>
+        <a href="#top" className="back-top">
+          BAŞA DÖN ↑
+        </a>
+      </footer>
+
+      {/* Galeri Lightbox Dialog */}
+      {lightboxIndex !== null && (
+        <div
+          className="lightbox-backdrop"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Oyun görüntüleri"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setLightboxIndex(null);
+          }}
+        >
+          <div className="lightbox">
+            <button
+              type="button"
+              className="lightbox-close"
+              aria-label="Galeriyi kapat"
+              onClick={() => setLightboxIndex(null)}
+            >
+              ✕
+            </button>
+            <div className="lightbox-inner">
+              <img
+                src={GALLERY_ITEMS[lightboxIndex].image}
+                alt={GALLERY_ITEMS[lightboxIndex].caption}
+              />
+              <div className="lightbox-toolbar">
+                <button
+                  type="button"
+                  id="gallery-prev"
+                  aria-label="Önceki görüntü"
+                  onClick={() =>
+                    setLightboxIndex(
+                      (lightboxIndex - 1 + GALLERY_ITEMS.length) %
+                        GALLERY_ITEMS.length,
+                    )
+                  }
+                >
+                  ←
+                </button>
+                <p id="lightbox-caption">{GALLERY_ITEMS[lightboxIndex].caption}</p>
+                <button
+                  type="button"
+                  id="gallery-next"
+                  aria-label="Sonraki görüntü"
+                  onClick={() =>
+                    setLightboxIndex(
+                      (lightboxIndex + 1) % GALLERY_ITEMS.length,
+                    )
+                  }
+                >
+                  →
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Topluluk Dialogu */}
+      {communityOpen && (
+        <div
+          className="community-backdrop"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="community-title"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setCommunityOpen(false);
+          }}
+        >
+          <div className="community-dialog">
+            <button
+              type="button"
+              className="dialog-close"
+              id="community-close"
+              aria-label="Topluluğu kapat"
+              onClick={() => setCommunityOpen(false)}
+            >
+              ✕
+            </button>
+            <p className="eyebrow">KALE2 TOPLULUĞU / ÖRNEK EKRAN</p>
+            <h2 id="community-title">
+              TAKIMIN
+              <br />
+              <em>BURADA.</em>
+            </h2>
+            <p>
+              Gerçek Discord sunucusu bağlandığında buluşacağımız alanların taslağı.
+            </p>
+            <div className="community-channel">
+              <span>#</span>
+              <div>
+                <b>duyurular</b>
+                <p>Test tarihleri, yeni sürümler ve cepheden haberler.</p>
+              </div>
+            </div>
+            <div className="community-channel">
+              <span>#</span>
+              <div>
+                <b>takım-ara</b>
+                <p>Rolünü söyle. Beşliyi tamamla. Birlikte sıraya gir.</p>
+              </div>
+            </div>
+            <div className="community-channel">
+              <span>#</span>
+              <div>
+                <b>geri-bildirim</b>
+                <p>Kaçış hissi, güçlü eşyalar, unutulmaz savaşlar.</p>
+              </div>
+            </div>
+            <button
+              type="button"
+              id="community-to-form"
+              className="button button-red"
+              onClick={() => {
+                setCommunityOpen(false);
+                document.getElementById('test-form')?.scrollIntoView({
+                  behavior: 'smooth',
+                  block: 'center',
+                });
+                document.getElementById('player-name')?.focus({
+                  preventScroll: true,
+                });
+              }}
+            >
+              TEST FORMUNU KEŞFET ↗
+            </button>
+            <p className="community-note">
+              Bu pencere Discord'a bağlanmaz; henüz üye veya mesaj verisi içermez.
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
