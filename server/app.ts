@@ -14,6 +14,7 @@ import {
 } from '../shared/constants.ts';
 import type { BonusType, DashboardStats } from '../shared/types.ts';
 import { authRouter, requireAuth, type AuthConfig } from './auth.ts';
+import { registerAccount, getAccountCount, listAccounts } from './accounts.ts';
 import { logActivity, type DB } from './db.ts';
 import { dropsRouter, dropUsageOfItem } from './drops.ts';
 import { HttpError } from './http-error.ts';
@@ -166,11 +167,40 @@ export function createApp({ db, uploadDir, auth, clientDir, publicWiki = true, i
   const uploadIcon = runUpload(uploader('icons', ICON_EXTENSIONS, MAX_ICON_BYTES));
 
   const api = express.Router();
+
+  // ---- Oyuncu Kayıt & İstatistik Uç Noktaları (Herkese Açık) ----
+  api.post('/auth/register', (req, res, next) => {
+    try {
+      const account = registerAccount(db, req.body ?? {});
+      res.status(201).json({
+        ok: true,
+        message: 'Kayıt başarıyla tamamlandı! KALE2 dünyasına hoş geldin.',
+        account,
+      });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  api.get('/public/accounts/stats', (_req, res) => {
+    res.json({
+      totalPlayers: getAccountCount(db),
+    });
+  });
+
   api.use('/auth', authRouter(auth));
   api.get('/public/status', (_req, res) => res.json({ enabled: publicWiki }));
   api.use('/public', ...(publicWiki ? [] : [requireAuth(auth)]), wikiRouter(db));
   api.use('/game', gameRouter(db, gameToken));
   api.use(requireAuth(auth));
+
+  // ---- Admin: Kayıtlı Oyuncular ----
+  api.get('/accounts', (req, res) => {
+    const page = Math.max(1, Number(req.query.page) || 1);
+    const pageSize = Math.min(100, Math.max(1, Number(req.query.pageSize) || 20));
+    const offset = (page - 1) * pageSize;
+    res.json(listAccounts(db, pageSize, offset));
+  });
 
   // ---- Dashboard ----
   api.get('/dashboard', (_req, res) => {
