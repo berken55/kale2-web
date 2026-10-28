@@ -169,7 +169,7 @@ export function LandingPage() {
           <div className="hero-runes" aria-hidden><i /><i /><i /></div>
           <div className="hero-content page-width">
             <div className="eyebrow hero-eyebrow"><span className="eyebrow-line" /> TAKIMINI TOPLA. KALEYİ ELE GEÇİR.</div>
-            <h1 id="hero-title"><span className="hero-versus">5-5</span><br />KALE <em>SAVAŞI</em></h1>
+            <h1 id="hero-title" className="hero-mark"><span className="hero-versus">5-5</span><span className="hero-mark__title">KALE <i>/</i> SAVAŞI</span></h1>
             <div className="battle-facts" aria-label="Oyun özellikleri"><span className="match-time"><strong>30</strong> DAKİKA</span><span className="fair-play">PAY2WIN <b aria-label="yok">✕</b></span></div>
             <p className="loot-line">BOSS <i>/</i> METİN <i>/</i> SANDIK <i>/</i> ŞANS</p>
             <p className="hero-motto">İyi olan kazansın<span>.</span></p>

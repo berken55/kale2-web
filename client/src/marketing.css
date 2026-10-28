@@ -51,9 +51,10 @@
 .marketing-site .hero-content{padding-top:165px;padding-bottom:115px;position:relative}
 .marketing-site .hero-eyebrow{color:#9bebff;font-family:'Barlow Condensed',sans-serif;font-size:14px;letter-spacing:.25em}
 .marketing-site .eyebrow-line{background:#7bdefa;box-shadow:0 0 16px #45ceff}
-.marketing-site .hero h1{font-size:clamp(40px,5.25vw,85px);font-weight:800;line-height:1.16;letter-spacing:-.035em;margin:20px 0 18px;max-width:850px;color:#fff5df;text-shadow:0 5px 0 #141939,0 0 45px #68afff40}
+.marketing-site .hero h1.hero-mark{display:flex;flex-direction:column;align-items:flex-start;gap:6px;font-size:unset;font-weight:unset;line-height:unset;letter-spacing:unset;margin:18px 0 16px;max-width:850px;color:unset;text-shadow:none;background:none}
 .marketing-site .hero h1 .hero-versus{font-family:'Barlow Condensed',sans-serif;font-size:clamp(100px,11vw,168px);line-height:.85;letter-spacing:.025em;color:#92eaff;text-shadow:0 0 38px #16b8ff66,0 6px 0 #17396d}
-.marketing-site .hero h1 em{display:inline;background:linear-gradient(105deg,#ffe89f,#ff9e48 70%,#ff775b);-webkit-background-clip:text;background-clip:text;color:transparent;text-shadow:none}
+.marketing-site .hero-mark__title{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:clamp(36px,4.6vw,64px);letter-spacing:.12em;line-height:1;color:#ffe5a1}
+.marketing-site .hero-mark__title i{font-style:normal;color:#6f9ddd;margin:0 .15em}
 .battle-facts{display:flex;align-items:stretch;gap:14px;margin:24px 0 20px;font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:.12em}
 .battle-facts>span{display:flex;align-items:center;gap:10px;padding:9px 18px;border:1px solid #6bcfff70;background:linear-gradient(130deg,#197fd83d,#1532687d);font-size:20px;color:#c6f4ff;box-shadow:inset 0 0 28px #4aafff10}
 .battle-facts .match-time strong{font-size:38px;line-height:1;color:#fff}
@@ -101,7 +102,8 @@
   .marketing-site .site-header{height:76px}.marketing-site .brand-copy strong{font-size:15px}.marketing-site .brand-mark{width:38px;height:43px;font-size:29px}
   .marketing-site .mobile-nav:not([hidden]){top:76px;background:#111b38f7}.marketing-site .mobile-nav a{font-family:'Barlow Condensed',sans-serif;color:#b5e9ff}
   .marketing-site .hero{min-height:800px}.marketing-site .hero-content{padding-top:146px;padding-bottom:110px}
-  .marketing-site .hero h1{font-size:clamp(35px,7.2vw,58px)}.marketing-site .hero h1 .hero-versus{font-size:116px}
+  .marketing-site .hero h1 .hero-versus{font-size:116px}
+  .marketing-site .hero-mark__title{font-size:clamp(28px,7vw,42px)}
   .marketing-site .hero-image:after{left:0;right:0;top:0;bottom:0;filter:saturate(1.4);mask-image:none;-webkit-mask-image:none;transform:none}
   .marketing-site .hero:before{background:linear-gradient(90deg,#0a1129f0,#102048a8 30%,transparent 55%),linear-gradient(0deg,#0c1023d9,transparent 75%)}
   .marketing-site .hero-eyebrow{font-size:12px;letter-spacing:.13em}.marketing-site .hero-content>.loot-line{font-size:20px;letter-spacing:.06em}
@@ -152,3 +154,4 @@
   .hero-video{display:none}
   .marketing-site .hero-image-fallback,.marketing-site .hero-image-fallback--visible{display:block}
 }
+
