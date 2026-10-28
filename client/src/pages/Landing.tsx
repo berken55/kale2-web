@@ -112,13 +112,15 @@ const SPECIALTY_KEYS = ['bedensel', 'zihinsel', 'yakin', 'uzak'] as const;
 /* Galeri verileri */
 const GALLERY_ITEMS = [
   { image: '/assets/campaign/castle.webp', caption: '01 / KALE KAPILARINDA — OYUN İÇİ GÖRÜNTÜ' },
-  { image: '/assets/campaign/battle.webp', caption: '02 / CEPHEYE DOĞRU — OYUN İÇİ GÖRÜNTÜ' },
-  { image: '/assets/campaign/night.webp', caption: '03 / GECE NÖBETİ — OYUN İÇİ GÖRÜNTÜ' },
-  { image: '/assets/campaign/world.webp', caption: '04 / SAVAŞ ALANI — KONSEPT HARİTA' },
-  { image: '/assets/campaign/sunset.webp', caption: '05 / SAVAŞ ALANI — GÜN BATIMI' },
-  { image: '/assets/campaign/hero.webp', caption: '06 / KALE2 EVRENİ — KONSEPT GÖRSEL' },
-  { image: '/assets/campaign/warrior.webp', caption: '07 / SAVAŞÇI — KARAKTER KONSEPTİ' },
-  { image: '/assets/campaign/ninja.webp', caption: '08 / NİNJA — OYUN İÇİ KARAKTER' },
+  { image: '/assets/campaign/ui-character-select.jpg', caption: '02 / KARAKTERİNİ SEÇ & OYUN MODLARI — OYUN İÇİ ARAYÜZ' },
+  { image: '/assets/campaign/ui-power-select.jpg', caption: '03 / ÖZEL GÜÇ SEÇİMİ (10. SEVİYE ÖDÜLÜ) — OYUN İÇİ ARAYÜZ' },
+  { image: '/assets/campaign/battle.webp', caption: '04 / CEPHEYE DOĞRU — OYUN İÇİ GÖRÜNTÜ' },
+  { image: '/assets/campaign/night.webp', caption: '05 / GECE NÖBETİ — OYUN İÇİ GÖRÜNTÜ' },
+  { image: '/assets/campaign/world.webp', caption: '06 / SAVAŞ ALANI — KONSEPT HARİTA' },
+  { image: '/assets/campaign/sunset.webp', caption: '07 / SAVAŞ ALANI — GÜN BATIMI' },
+  { image: '/assets/campaign/hero.webp', caption: '08 / KALE2 EVRENİ — KONSEPT GÖRSEL' },
+  { image: '/assets/campaign/warrior.webp', caption: '09 / SAVAŞÇI — KARAKTER KONSEPTİ' },
+  { image: '/assets/campaign/ninja.webp', caption: '10 / NİNJA — OYUN İÇİ KARAKTER' },
 ];
 
 const STORAGE_KEY = 'kale2-demo-application-v1';
@@ -377,6 +379,9 @@ export function LandingPage() {
           <a href="#fragman" onClick={() => setMenuOpen(false)}>
             Fragman
           </a>
+          <a href="#sistemler" onClick={() => setMenuOpen(false)}>
+            Sistemler
+          </a>
           <a href="#karakterler" onClick={() => setMenuOpen(false)}>
             Karakterler
           </a>
@@ -516,11 +521,11 @@ export function LandingPage() {
               role="button"
               tabIndex={0}
               style={{ cursor: 'zoom-in' }}
-              onClick={() => setLightboxIndex(1)}
+              onClick={() => setLightboxIndex(5)}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' || e.key === ' ') {
                   e.preventDefault();
-                  setLightboxIndex(1);
+                  setLightboxIndex(5);
                 }
               }}
             >
@@ -551,11 +556,11 @@ export function LandingPage() {
               role="button"
               tabIndex={0}
               style={{ cursor: 'zoom-in' }}
-              onClick={() => setLightboxIndex(4)}
+              onClick={() => setLightboxIndex(6)}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' || e.key === ' ') {
                   e.preventDefault();
-                  setLightboxIndex(4);
+                  setLightboxIndex(6);
                 }
               }}
             >
@@ -700,10 +705,132 @@ export function LandingPage() {
           </div>
         </section>
 
-        {/* 02 / Karakterler */}
+        {/* 02 / Oyun Sistemleri & Arayüz */}
+        <section className="systems section-pad" id="sistemler">
+          <div className="section-kicker">
+            <span>02 / OYUN SİSTEMLERİ & ARAYÜZ</span>
+            <span>GELİŞTİRME SÜRÜMÜNDEN KARELER</span>
+          </div>
+          <div className="systems-heading">
+            <div>
+              <p className="eyebrow">LOBİDEN CEPHEDEKİ ZAFERE</p>
+              <h2>
+                STRATEJİNİ KUR
+                <br />
+                <em>GÜCÜNÜ SEÇ.</em>
+              </h2>
+            </div>
+            <p>
+              Lobi ekranında karakterini ve oyun modunu belirle; maç içinde seviye atladıkça
+              efsanevi ekipmanlar ve özel auralarla üstünlüğü ele geçir.
+            </p>
+          </div>
+
+          <div className="systems-grid">
+            {/* Kart 1: Karakter & Mod Seçimi */}
+            <div
+              className="system-card"
+              role="button"
+              tabIndex={0}
+              onClick={() => setLightboxIndex(1)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  setLightboxIndex(1);
+                }
+              }}
+            >
+              <div className="system-preview">
+                <img
+                  src="/assets/campaign/ui-character-select.jpg"
+                  alt="KALE2 Karakter ve Oyun Modu Seçim Arayüzü"
+                  loading="lazy"
+                  width={1536}
+                  height={864}
+                />
+                <div className="system-overlay">
+                  <span className="system-zoom-badge">BÜYÜTMEK İÇİN TIKLA ↗</span>
+                </div>
+              </div>
+              <div className="system-body">
+                <div className="system-tagline">
+                  <span>01 / LOBİ & KARAKTER SEÇİMİ</span>
+                  <span className="system-pill">4 SINIF · 4 MOD</span>
+                </div>
+                <h3>KARAKTERİNİ VE MODUNU SEÇ</h3>
+                <p>
+                  Savaşına yön verecek kahramanı seçip hemen cepheye atıl.
+                </p>
+                <div className="system-features">
+                  <div className="system-feature-item">
+                    <strong>Sınıflar:</strong>
+                    <span>Savaşçı, Ninja, Şaman ve Sura</span>
+                  </div>
+                  <div className="system-feature-item">
+                    <strong>Oyun Modları:</strong>
+                    <span>Hızlı Test, Yapay Zekaya Karşı Bot Maçı, 1-1 Koridor Düellosu ve 5v5 Online Rekabet</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Kart 2: 10. Seviye Özel Güç Seçimi */}
+            <div
+              className="system-card"
+              role="button"
+              tabIndex={0}
+              onClick={() => setLightboxIndex(2)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  setLightboxIndex(2);
+                }
+              }}
+            >
+              <div className="system-preview">
+                <img
+                  src="/assets/campaign/ui-power-select.jpg"
+                  alt="KALE2 10. Seviye Özel Güç ve Ekipman Seçimi Arayüzü"
+                  loading="lazy"
+                  width={1536}
+                  height={864}
+                />
+                <div className="system-overlay">
+                  <span className="system-zoom-badge">BÜYÜTMEK İÇİN TIKLA ↗</span>
+                </div>
+              </div>
+              <div className="system-body">
+                <div className="system-tagline">
+                  <span>02 / MAÇ İÇİ İLERLEME & ÖDÜL</span>
+                  <span className="system-pill highlight">10. SEVİYE</span>
+                </div>
+                <h3>ÖZEL GÜÇ SEÇİMİ</h3>
+                <p>
+                  Seviye 10'a ulaştığında kendine en uygun ekipmanı seç ve efsanevi özel gücünü kuşan.
+                </p>
+                <div className="system-features">
+                  <div className="system-feature-item">
+                    <strong>Ay Işığı Kılıcı (Efsanevi):</strong>
+                    <span>Saldırıda rakiplerin savunmasını düşüren Ay Işığı Aurası.</span>
+                  </div>
+                  <div className="system-feature-item">
+                    <strong>Ejderha Zırhı (Efsanevi):</strong>
+                    <span>Can %30 altına düştüğünde kritik hasar azaltımı.</span>
+                  </div>
+                  <div className="system-feature-item">
+                    <strong>Kutsal Başlık (Efsanevi):</strong>
+                    <span>Büyülerin bekleme süresinde %15 hızlandırma.</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* 03 / Karakterler */}
         <section className="characters section-pad" id="karakterler">
           <div className="section-kicker">
-            <span>02 / TARZINI SEÇ</span>
+            <span>03 / TARZINI SEÇ</span>
             <span>İKİ KARAKTER. DÖRT YOL.</span>
           </div>
           <div className="character-layout">
@@ -772,11 +899,11 @@ export function LandingPage() {
               tabIndex={0}
               style={{ cursor: 'zoom-in' }}
               title="Karakter görselini büyütmek için tıkla"
-              onClick={() => setLightboxIndex(characterKey === 'warrior' ? 6 : 7)}
+              onClick={() => setLightboxIndex(characterKey === 'warrior' ? 8 : 9)}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' || e.key === ' ') {
                   e.preventDefault();
-                  setLightboxIndex(characterKey === 'warrior' ? 6 : 7);
+                  setLightboxIndex(characterKey === 'warrior' ? 8 : 9);
                 }
               }}
             >
@@ -919,7 +1046,7 @@ export function LandingPage() {
         {/* 03 / Ganimet */}
         <section className="loot section-pad" id="ganimet">
           <div className="section-kicker">
-            <span>03 / GANİMETİN BEDELİ</span>
+            <span>04 / GANİMETİN BEDELİ</span>
             <span>PLANLANAN BOSS DÖNGÜSÜ</span>
           </div>
           <div className="loot-layout">
@@ -1054,11 +1181,11 @@ export function LandingPage() {
               role="button"
               tabIndex={0}
               style={{ cursor: 'zoom-in' }}
-              onClick={() => setLightboxIndex(3)}
+              onClick={() => setLightboxIndex(5)}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' || e.key === ' ') {
                   e.preventDefault();
-                  setLightboxIndex(3);
+                  setLightboxIndex(5);
                 }
               }}
             >
@@ -1108,7 +1235,7 @@ export function LandingPage() {
         {/* 05 / Galeri */}
         <section className="gallery section-pad" id="galeri">
           <div className="section-kicker">
-            <span>05 / CEPHEDEN GÖRÜNTÜLER</span>
+            <span>06 / CEPHEDEN GÖRÜNTÜLER</span>
             <span>GERÇEK OYUN İÇİ KARELER</span>
           </div>
           <div className="gallery-heading">
@@ -1126,7 +1253,7 @@ export function LandingPage() {
           <div className="gallery-grid">
             <button
               type="button"
-              className="gallery-item gallery-main"
+              className="gallery-item"
               onClick={() => setLightboxIndex(0)}
             >
               <img
@@ -1147,6 +1274,40 @@ export function LandingPage() {
               onClick={() => setLightboxIndex(1)}
             >
               <img
+                src="/assets/campaign/ui-character-select.jpg"
+                alt="Karakter ve Oyun Modu Seçimi arayüzü"
+                loading="lazy"
+                width={1536}
+                height={864}
+              />
+              <span>
+                <b>LOBİ VE MOD SEÇİMİ</b>
+                <i aria-hidden="true">↗</i>
+              </span>
+            </button>
+            <button
+              type="button"
+              className="gallery-item"
+              onClick={() => setLightboxIndex(2)}
+            >
+              <img
+                src="/assets/campaign/ui-power-select.jpg"
+                alt="10. Seviye Özel Güç Seçimi arayüzü"
+                loading="lazy"
+                width={1536}
+                height={864}
+              />
+              <span>
+                <b>ÖZEL GÜÇ SEÇİMİ</b>
+                <i aria-hidden="true">↗</i>
+              </span>
+            </button>
+            <button
+              type="button"
+              className="gallery-item"
+              onClick={() => setLightboxIndex(3)}
+            >
+              <img
                 src="/assets/campaign/battle.webp"
                 alt="Koridorda ilerleyen kahramanlar ve minyonlar"
                 loading="lazy"
@@ -1161,7 +1322,7 @@ export function LandingPage() {
             <button
               type="button"
               className="gallery-item"
-              onClick={() => setLightboxIndex(2)}
+              onClick={() => setLightboxIndex(4)}
             >
               <img
                 src="/assets/campaign/night.webp"
@@ -1172,6 +1333,23 @@ export function LandingPage() {
               />
               <span>
                 <b>GECE NÖBETİ</b>
+                <i aria-hidden="true">↗</i>
+              </span>
+            </button>
+            <button
+              type="button"
+              className="gallery-item"
+              onClick={() => setLightboxIndex(5)}
+            >
+              <img
+                src="/assets/campaign/world.webp"
+                alt="Savaş alanı konsept haritası"
+                loading="lazy"
+                width={1358}
+                height={768}
+              />
+              <span>
+                <b>SAVAŞ ALANI HARİTASI</b>
                 <i aria-hidden="true">↗</i>
               </span>
             </button>
