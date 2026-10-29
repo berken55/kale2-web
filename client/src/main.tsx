@@ -21,7 +21,10 @@ import { MonsterEditorPage } from './pages/MonsterEditor';
 import { MonsterListPage } from './pages/MonsterList';
 import { LandingPage } from './pages/Landing';
 import { ProfilePage } from './pages/Profile';
-import { GamePage } from './pages/Game';
+import { PlayerProvider } from './player-auth';
+import { PlayerAccount } from './pages/PlayerAccount';
+import { PlayerLobby } from './pages/PlayerLobby';
+import { PlayerDownload } from './pages/PlayerDownload';
 import { WikiCategory } from './wiki/WikiCategory';
 import { WikiHome } from './wiki/WikiHome';
 import { WikiItem } from './wiki/WikiItem';
@@ -70,11 +73,15 @@ function App() {
   return (
     <Routes>
       <Route path="/" element={<LandingPage />} />
-      <Route path="profil" element={<ProfilePage />} />
+      <Route path="/oyuncu/giris" element={<PlayerAccount />} />
+      <Route path="/oyuncu/kayit" element={<PlayerAccount register />} />
+      <Route path="/lobi" element={<PlayerLobby />} />
+      <Route path="/indir" element={<PlayerDownload />} />
+      <Route path="profil" element={<Navigate to="/lobi" replace />} />
       <Route path="feedback" element={<ProfilePage />} />
-      <Route path="beta" element={<ProfilePage />} />
-      <Route path="game" element={<GamePage />} />
-      <Route path="oyun" element={<GamePage />} />
+      <Route path="beta" element={<Navigate to="/lobi" replace />} />
+      <Route path="game" element={<Navigate to="/lobi" replace />} />
+      <Route path="oyun" element={<Navigate to="/lobi" replace />} />
       {/* Oyunculara açık item wiki'si — giriş gerektirmez */}
       <Route path="wiki" element={<WikiLayout />}>
         <Route index element={<WikiHome />} />
@@ -97,7 +104,9 @@ createRoot(document.getElementById('root')!).render(
       <ToastProvider>
         <ConfirmProvider>
           <AuthProvider>
+            <PlayerProvider>
             <App />
+            </PlayerProvider>
           </AuthProvider>
         </ConfirmProvider>
       </ToastProvider>

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from 'react';
 import { Link } from 'react-router-dom';
+import { usePlayer } from '../player-auth';
 import { HERO_VIDEO_SRC } from '../heroVideo';
 import { Hero3DViewer } from '../components/Hero3DViewer';
 import type { LeaderboardEntry } from '@shared/types';
@@ -128,6 +129,7 @@ const GALLERY_ITEMS = [
 const STORAGE_KEY = 'kale2-demo-application-v1';
 
 export function LandingPage() {
+  const { player } = usePlayer();
   /* Mobil menü durumu */
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -156,23 +158,6 @@ export function LandingPage() {
   /* Topluluk Dialogu */
   const [communityOpen, setCommunityOpen] = useState(false);
 
-  /* Oyuncu Üyelik / Kayıt durumu */
-  const [username, setUsername] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [passwordConfirm, setPasswordConfirm] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  const [formSpecialty, setFormSpecialty] = useState('kararsiz');
-  const [acknowledge, setAcknowledge] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-  const [formError, setFormError] = useState('');
-  const [registeredAccount, setRegisteredAccount] = useState<{
-    id: number;
-    username: string;
-    email: string;
-    specialty: string;
-    createdAt: string;
-  } | null>(null);
   const [totalPlayers, setTotalPlayers] = useState<number | null>(null);
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [leaderboardLoading, setLeaderboardLoading] = useState(true);
@@ -202,18 +187,7 @@ export function LandingPage() {
       .catch(() => {})
       .finally(() => setLeaderboardLoading(false));
 
-    // Bu tarayıcıda daha önce açılmış hesap varsa yükle
-    try {
-      const saved = localStorage.getItem('kale2_registered_account');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (parsed && typeof parsed.username === 'string') {
-          setRegisteredAccount(parsed);
-        }
-      }
-    } catch {
-      // LocalStorage kısıtlı olabilir
-    }
+
   }, []);
 
   /* Dialog açıldığında body scrollunu engelle */
@@ -353,70 +327,6 @@ export function LandingPage() {
   };
 
   /* Oyuncu Kayıt Gönderimi */
-  const handleRegister = async (e: FormEvent) => {
-    e.preventDefault();
-    setFormError('');
-
-    const cleanUsername = username.trim();
-    const cleanEmail = email.trim();
-
-    if (cleanUsername.length < 3 || cleanUsername.length > 24) {
-      setFormError('Oyuncu adı 3-24 karakter uzunluğunda olmalıdır.');
-      return;
-    }
-    if (!/^[a-zA-Z0-9_]+$/.test(cleanUsername)) {
-      setFormError('Oyuncu adı yalnızca harf, rakam ve alt çizgi içerebilir.');
-      return;
-    }
-    if (!cleanEmail || !cleanEmail.includes('@')) {
-      setFormError('Geçerli bir e-posta adresi giriniz.');
-      return;
-    }
-    if (password.length < 6) {
-      setFormError('Şifreniz en az 6 karakter olmalıdır.');
-      return;
-    }
-    if (password !== passwordConfirm) {
-      setFormError('Girdiğiniz şifreler birbiriyle eşleşmiyor.');
-      return;
-    }
-    if (!acknowledge) {
-      setFormError('Lütfen kayıt koşullarını onaylayınız.');
-      return;
-    }
-
-    setSubmitting(true);
-    try {
-      const res = await fetch('/api/auth/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          username: cleanUsername,
-          email: cleanEmail,
-          password,
-          specialty: formSpecialty || 'kararsiz',
-        }),
-      });
-
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || 'Kayıt sırasında bir hata oluştu.');
-      }
-
-      setRegisteredAccount(data.account);
-      setPassword('');
-      setPasswordConfirm('');
-      try {
-        localStorage.setItem('kale2_registered_account', JSON.stringify(data.account));
-      } catch {}
-
-      setTotalPlayers((prev) => (prev !== null ? prev + 1 : 1));
-    } catch (err: any) {
-      setFormError(err.message || 'Sunucuya bağlanılamadı. Lütfen tekrar deneyiniz.');
-    } finally {
-      setSubmitting(false);
-    }
-  };
 
   return (
     <div className="landing-campaign">
@@ -456,8 +366,8 @@ export function LandingPage() {
           <a href="#siralama" onClick={() => setMenuOpen(false)}>
             Sıralama
           </a>
-          <Link to="/game" onClick={() => setMenuOpen(false)}>
-            🎮 3D Oyun
+          <Link to="/lobi" onClick={() => setMenuOpen(false)}>
+            Oyuncu Lobisi
           </Link>
           <Link to="/feedback" onClick={() => setMenuOpen(false)}>
             Beta Geri Bildirim
@@ -466,8 +376,8 @@ export function LandingPage() {
             Wiki
           </Link>
         </nav>
-        <Link to="/profil" className="nav-cta">
-          GİRİŞ / PROFİL <span aria-hidden="true">↗</span>
+        <Link to={player ? "/lobi" : "/oyuncu/giris"} className="nav-cta">
+          {player ? "LOBİYE GİR" : "GİRİŞ YAP"} <span aria-hidden="true">↗</span>
         </Link>
         <button
           type="button"
@@ -1586,7 +1496,7 @@ export function LandingPage() {
               </div>
               <div className="join-benefit">
                 <b>03 / DOĞRUDAN ERİŞİM</b>
-                <span>Sunucu ve testler açıldığında beklemeden bu hesabınla oyuna bağlan.</span>
+                <span>Kayıt sonrası web lobisine gir, arkadaşlarınla beta buluşmanı planla.</span>
               </div>
               <button
                 type="button"
@@ -1600,197 +1510,15 @@ export function LandingPage() {
               </p>
             </div>
 
-            {registeredAccount ? (
-              <div className="join-form registration-success-card" id="test-form">
-                <div className="form-heading">
-                  <span>KALE2 RESMİ HESAP</span>
-                  <span className="register-badge"><span className="live-dot" /> AKTİF KAYIT</span>
-                </div>
-                <div className="success-badge">✦ KAYIT TAMAMLANDI ✦</div>
-                <h3>SAVAŞA HAZIRSIN, {registeredAccount.username}!</h3>
-                <p className="form-disclaimer">
-                  Hesabın başarıyla sunucuya kaydedildi. Sunucu testleri ve oyun açılışında bu hesap bilgilerinle doğrudan giriş yapabileceksin.
-                </p>
-                <div className="registered-details">
-                  <div className="reg-row">
-                    <span>Oyuncu Adı</span>
-                    <strong>{registeredAccount.username}</strong>
-                  </div>
-                  <div className="reg-row">
-                    <span>E-Posta</span>
-                    <strong>{registeredAccount.email}</strong>
-                  </div>
-                  <div className="reg-row">
-                    <span>Seçilen Yol</span>
-                    <strong>
-                      {registeredAccount.specialty === 'bedensel'
-                        ? 'Savaşçı / Bedensel'
-                        : registeredAccount.specialty === 'zihinsel'
-                          ? 'Savaşçı / Zihinsel'
-                          : registeredAccount.specialty === 'yakin'
-                            ? 'Ninja / Yakın dövüş'
-                            : registeredAccount.specialty === 'uzak'
-                              ? 'Ninja / Uzak dövüş'
-                              : 'Henüz Seçilmedi'}
-                    </strong>
-                  </div>
-                  <div className="reg-row">
-                    <span>Kayıt Tarihi</span>
-                    <small>{new Date(registeredAccount.createdAt).toLocaleString('tr-TR')}</small>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  className="button button-outline"
-                  onClick={() => {
-                    setRegisteredAccount(null);
-                    setUsername('');
-                    setEmail('');
-                    setPassword('');
-                    setPasswordConfirm('');
-                    setFormError('');
-                  }}
-                  style={{ marginTop: '20px', width: '100%' }}
-                >
-                  YENİ BİR HESAP KAYDET ↺
-                </button>
-              </div>
-            ) : (
-              <form className="join-form" id="test-form" onSubmit={handleRegister}>
-                <div className="form-heading">
-                  <span>KALE2 OYUNCU KAYDI</span>
-                  <span className="register-badge"><span className="live-dot" /> CANLI VERİTABANI</span>
-                </div>
-                <h3>HESABINI OLUŞTUR.</h3>
-                <p className="form-disclaimer">
-                  Savaşçı adını belirle, şifreni oluştur ve erken erişim için yerini hemen ayırt. Bilgilerin sunucumuzda güvenle saklanır.
-                </p>
-
-                {formError && (
-                  <div className="form-error-alert" role="alert">
-                    <span>⚠</span> {formError}
-                  </div>
-                )}
-
-                <label htmlFor="player-username">
-                  OYUNCU ADIN (KULLANICI ADI)
-                  <input
-                    id="player-username"
-                    name="username"
-                    autoComplete="username"
-                    placeholder="Örn: AlpArslan (3-24 karakter)"
-                    required
-                    minLength={3}
-                    maxLength={24}
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                  />
-                  <small className="field-hint">Harf, rakam ve alt çizgi (_) içerebilir.</small>
-                </label>
-
-                <label htmlFor="player-email">
-                  E-POSTA ADRESİN
-                  <input
-                    id="player-email"
-                    name="email"
-                    type="email"
-                    autoComplete="email"
-                    placeholder="oyuncu@ornek.com"
-                    required
-                    maxLength={254}
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                  />
-                </label>
-
-                <div className="password-fields-row">
-                  <label htmlFor="player-password">
-                    ŞİFREN
-                    <div className="password-input-wrapper">
-                      <input
-                        id="player-password"
-                        name="password"
-                        type={showPassword ? 'text' : 'password'}
-                        autoComplete="new-password"
-                        placeholder="En az 6 karakter"
-                        required
-                        minLength={6}
-                        maxLength={128}
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                      />
-                      <button
-                        type="button"
-                        className="password-toggle-btn"
-                        onClick={() => setShowPassword(!showPassword)}
-                        aria-label={showPassword ? 'Şifreyi gizle' : 'Şifreyi göster'}
-                      >
-                        {showPassword ? '👁' : '👁‍🗨'}
-                      </button>
-                    </div>
-                  </label>
-
-                  <label htmlFor="player-password-confirm">
-                    ŞİFRE TEKRARI
-                    <input
-                      id="player-password-confirm"
-                      name="passwordConfirm"
-                      type={showPassword ? 'text' : 'password'}
-                      autoComplete="new-password"
-                      placeholder="Şifreni onayla"
-                      required
-                      minLength={6}
-                      maxLength={128}
-                      value={passwordConfirm}
-                      onChange={(e) => setPasswordConfirm(e.target.value)}
-                    />
-                  </label>
-                </div>
-
-                <label htmlFor="player-path">
-                  İLK TERCİHİN (SINIF & UZMANLIK)
-                  <select
-                    id="player-path"
-                    name="specialty"
-                    value={formSpecialty}
-                    onChange={(e) => setFormSpecialty(e.target.value)}
-                  >
-                    <option value="kararsiz">Henüz karar vermedim</option>
-                    <option value="bedensel">Savaşçı / Bedensel</option>
-                    <option value="zihinsel">Savaşçı / Zihinsel</option>
-                    <option value="yakin">Ninja / Yakın dövüş</option>
-                    <option value="uzak">Ninja / Uzak dövüş</option>
-                  </select>
-                </label>
-
-                <label className="form-check">
-                  <input
-                    type="checkbox"
-                    name="acknowledge"
-                    required
-                    checked={acknowledge}
-                    onChange={(e) => setAcknowledge(e.target.checked)}
-                  />
-                  <span>
-                    KALE2 kurallarını kabul ediyor ve şifremle oyuncu hesabımın sunucuda açılmasını onaylıyorum.
-                  </span>
-                </label>
-
-                <button
-                  type="submit"
-                  className="button button-red register-submit-btn"
-                  disabled={submitting}
-                >
-                  {submitting ? 'HESAP OLUŞTURULUYOR...' : 'HESABIMI OLUŞTUR'} <span aria-hidden="true">↗</span>
-                </button>
-
-                {totalPlayers !== null && (
-                  <p className="registered-counter">
-                    <span className="live-dot" /> Şu ana kadar <b>{totalPlayers}</b> oyuncu kaydolarak yerini ayırttı.
-                  </p>
-                )}
-              </form>
-            )}
+            <div className="join-form registration-success-card" id="test-form">
+              <div className="form-heading"><span>OYUNCU LOBİSİ</span><span className="register-badge">BETA</span></div>
+              <h3>{player ? `TEKRAR HOŞ GELDİN, ${player.username}!` : 'YERİNİ AL.'}</h3>
+              <p>Karakterini hazırla, savaş arkadaşlarını bul. Özel mesajlarla beta buluşmanızı planla.</p>
+              <Link className="button button-red register-submit-btn" to={player ? '/lobi' : '/oyuncu/kayit'}>{player ? 'LOBİYE GİR ↗' : 'KAYIT OL VE LOBİYE GİR ↗'}</Link>
+              {!player && <p><Link to="/oyuncu/giris">Zaten hesabın var mı? Giriş yap →</Link></p>}
+              {totalPlayers !== null && <p className="registered-counter"><span className="live-dot" /> <b>{totalPlayers}</b> kayıtlı oyuncu.</p>}
+              <p className="join-note">Web karakterleri önizlemedir. Gerçek maçlar indirdiğin oyun uygulamasında oynanır.</p>
+            </div>
           </div>
         </section>
 

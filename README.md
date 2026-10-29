@@ -1,5 +1,7 @@
 # METİN3 Website ve Kale2 Yönetim Paneli
 
+Oyuncu kayıt/giriş ekranı, karakter lobisi, kalıcı özel mesajlar ve son görülme bilgisi için [oyuncu lobisi belgesine](docs/oyuncu-lobisi.md) bakın. Mevcut hesaplar aynı `accounts` tablosundan kullanılır; ana sayfa ve yönetim paneli korunur.
+
 METİN3 tanıtım sitesi ile Metin2 tarzı MMORPG item yönetim panelini aynı uygulamada barındırır. Ana adres oyunculara açık websiteyi, `/admin` yönetim panelini ve `/wiki` item veritabanını sunar.
 
 Panelden şunları yapabilirsiniz:

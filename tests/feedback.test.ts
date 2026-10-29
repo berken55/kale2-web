@@ -18,9 +18,10 @@ async function setup() {
 describe('oyuncu girisi, profil ve beta geri bildirim (feedback) testleri', () => {
   it('oyuncu kayit olur, giris yapar ve profilini gorur', async () => {
     const { app } = await setup();
+    const agent = request.agent(app);
 
     // 1. Kayıt
-    const regRes = await request(app)
+    const regRes = await agent
       .post('/api/auth/register')
       .send({
         username: 'SavasciAlp',
@@ -34,7 +35,7 @@ describe('oyuncu girisi, profil ve beta geri bildirim (feedback) testleri', () =
     const accountId = regRes.body.account.id;
 
     // 2. Yanlış şifre ile giriş denemesi (401)
-    await request(app)
+    await agent
       .post('/api/player/login')
       .send({
         identifier: 'SavasciAlp',
@@ -43,7 +44,7 @@ describe('oyuncu girisi, profil ve beta geri bildirim (feedback) testleri', () =
       .expect(401);
 
     // 3. Başarılı Giriş (Kullanıcı adı ile)
-    const loginRes = await request(app)
+    const loginRes = await agent
       .post('/api/player/login')
       .send({
         identifier: 'SavasciAlp',
@@ -57,7 +58,7 @@ describe('oyuncu girisi, profil ve beta geri bildirim (feedback) testleri', () =
     expect(loginRes.body.profile.stats).toBeDefined();
 
     // 4. E-posta ile giriş
-    const emailLoginRes = await request(app)
+    const emailLoginRes = await agent
       .post('/api/player/login')
       .send({
         identifier: 'alp@kale2.com',
@@ -68,11 +69,12 @@ describe('oyuncu girisi, profil ve beta geri bildirim (feedback) testleri', () =
     expect(emailLoginRes.body.profile.username).toBe('SavasciAlp');
 
     // 5. Profil detayı
-    const profRes = await request(app).get(`/api/player/profile/${accountId}`).expect(200);
+    await request(app).get(`/api/player/profile/${accountId}`).expect(401);
+    const profRes = await agent.get(`/api/player/profile/${accountId}`).expect(200);
     expect(profRes.body.profile.username).toBe('SavasciAlp');
 
     // 6. Uzmanlık sınıfını güncelleme (bedensel -> zihinsel)
-    const updateRes = await request(app)
+    const updateRes = await agent
       .patch('/api/player/specialty')
       .send({
         accountId,

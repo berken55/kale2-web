@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, Navigate } from 'react-router-dom';
+import { usePlayer } from '../player-auth';
 import type { FeedbackCategory, FeedbackItem, PlayerProfile } from '@shared/types';
 import '../marketing.css';
 
@@ -19,6 +20,7 @@ const SPECIALTY_OPTIONS: { key: string; label: string; classType: 'warrior' | 'n
 ];
 
 export function ProfilePage() {
+  const session = usePlayer();
   const [player, setPlayer] = useState<PlayerProfile | null>(null);
   const [authTab, setAuthTab] = useState<'login' | 'register'>('login');
 
@@ -51,30 +53,17 @@ export function ProfilePage() {
   // Uzmanlık değiştirme
   const [updatingSpecialty, setUpdatingSpecialty] = useState(false);
 
-  // LocalStorage kontrolü
+  // Kimlik, localStorage yerine doğrulanmış sunucu oturumundan gelir.
   useEffect(() => {
     document.title = 'KALE2 — Oyuncu Profili & Beta Geri Bildirim';
-
-    try {
-      const saved = localStorage.getItem('kale2_player_profile');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (parsed && parsed.id) {
-          setPlayer(parsed);
-          // Sunucudan güncel profil ve istatistikleri çek
-          fetch(`/api/player/profile/${parsed.id}`)
-            .then((r) => r.json())
-            .then((res) => {
-              if (res.ok && res.profile) {
-                setPlayer(res.profile);
-                localStorage.setItem('kale2_player_profile', JSON.stringify(res.profile));
-              }
-            })
-            .catch(() => {});
-        }
-      }
-    } catch {}
-  }, []);
+    let active = true;
+    if (!session.player) { setPlayer(null); return; }
+    fetch(`/api/player/profile/${session.player.id}`, { credentials: 'same-origin' })
+      .then(r => { if (!r.ok) throw new Error('Profil yüklenemedi.'); return r.json(); })
+      .then(data => { if (active) setPlayer(data.profile); })
+      .catch(() => { if (active) setFbError('Profil yüklenemedi. Sayfayı yenileyerek tekrar deneyin.'); });
+    return () => { active = false; };
+  }, [session.player?.id]);
 
   // Oyuncunun feedbacklerini yükle
   const loadFeedbacks = (accountId?: number) => {
@@ -184,6 +173,7 @@ export function ProfilePage() {
 
   // Çıkış İşlemi
   const handleLogout = () => {
+    void session.logout().catch(() => setFbError('Çıkış yapılamadı.'));
     setPlayer(null);
     localStorage.removeItem('kale2_player_profile');
     localStorage.removeItem('kale2_registered_account');
@@ -262,6 +252,10 @@ export function ProfilePage() {
 
   const isNinja = player?.specialty === 'yakin' || player?.specialty === 'uzak';
   const characterImage = isNinja ? '/assets/campaign/ninja.webp' : '/assets/campaign/warrior.webp';
+
+  if (session.loading) return <div className="player-loading">Oturum kontrol ediliyor…</div>;
+  if (!session.player) return <Navigate to="/oyuncu/giris" replace />;
+  if (!player) return <div className="player-loading"><p>{fbError || 'Profil yükleniyor…'}</p><Link to="/lobi">Lobiye dön</Link></div>;
 
   return (
     <div className="landing-campaign profile-hub-page">

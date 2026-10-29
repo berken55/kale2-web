@@ -14,7 +14,8 @@ import {
 } from '../shared/constants.ts';
 import type { BonusType, DashboardStats } from '../shared/types.ts';
 import { authRouter, requireAuth, type AuthConfig } from './auth.ts';
-import { registerAccount, getAccountCount, listAccounts, loginPlayer, getPlayerProfile, updatePlayerSpecialty } from './accounts.ts';
+import { playersRouter, currentPlayer } from './players.ts';
+import { getAccountCount, listAccounts, getPlayerProfile, updatePlayerSpecialty } from './accounts.ts';
 import { createFeedback, listFeedbacks } from './feedbacks.ts';
 import { listMatches, getMatchDetail, listSessions, getMatchStats, getLeaderboard } from './matches.ts';
 import { importMatchLogs } from './match-logs.ts';
@@ -170,19 +171,13 @@ export function createApp({ db, uploadDir, auth, clientDir, publicWiki = true, i
   const uploadIcon = runUpload(uploader('icons', ICON_EXTENSIONS, MAX_ICON_BYTES));
 
   const api = express.Router();
+  const playerRoutes = playersRouter(db, auth);
+  api.use('/players', playerRoutes);
 
   // ---- Oyuncu Kayıt & İstatistik Uç Noktaları (Herkese Açık) ----
   api.post('/auth/register', (req, res, next) => {
-    try {
-      const account = registerAccount(db, req.body ?? {});
-      res.status(201).json({
-        ok: true,
-        message: 'Kayıt başarıyla tamamlandı! KALE2 dünyasına hoş geldin.',
-        account,
-      });
-    } catch (err) {
-      next(err);
-    }
+    req.url = '/register';
+    playerRoutes(req, res, next);
   });
 
   api.get('/public/accounts/stats', (_req, res) => {
@@ -198,18 +193,17 @@ export function createApp({ db, uploadDir, auth, clientDir, publicWiki = true, i
 
   // ---- Beta Oyuncu Girişi & Profil & Geri Bildirim ----
   api.post('/player/login', (req, res, next) => {
-    try {
-      const profile = loginPlayer(db, req.body ?? {});
-      res.json({ ok: true, profile });
-    } catch (err) {
-      next(err);
-    }
+    req.url = '/login';
+    playerRoutes(req, res, next);
   });
 
   api.get('/player/profile/:id', (req, res, next) => {
     try {
       const id = Number(req.params.id);
       if (!Number.isInteger(id) || id < 1) throw new HttpError(400, 'Gecersiz hesap id.');
+      const player = currentPlayer(db, req);
+      if (!player) throw new HttpError(401, 'Oyuncu hesabınızla giriş yapın.');
+      if (player.id !== id) throw new HttpError(403, 'Yalnızca kendi profilinizi görebilirsiniz.');
       const profile = getPlayerProfile(db, id);
       if (!profile) throw new HttpError(404, 'Hesap bulunamadi.');
       res.json({ ok: true, profile });
@@ -223,6 +217,9 @@ export function createApp({ db, uploadDir, auth, clientDir, publicWiki = true, i
       const accountId = Number(req.body?.accountId);
       const specialty = String(req.body?.specialty || '');
       if (!Number.isInteger(accountId) || accountId < 1) throw new HttpError(400, 'Gecersiz hesap.');
+      const player = currentPlayer(db, req);
+      if (!player) throw new HttpError(401, 'Oyuncu hesabınızla giriş yapın.');
+      if (player.id !== accountId) throw new HttpError(403, 'Yalnızca kendi profilinizi değiştirebilirsiniz.');
       const profile = updatePlayerSpecialty(db, accountId, specialty);
       res.json({ ok: true, profile });
     } catch (err) {
