@@ -2998,3 +2998,239 @@ video.hero-art {
     grid-template-columns: 1fr;
   }
 }
+
+
+/* 3D Model Hero Sahnesi Stilleri */
+.hero-3d-stage {
+  position: absolute;
+  right: 4%;
+  top: 50%;
+  transform: translateY(-50%);
+  width: min(560px, 48vw);
+  height: min(720px, 82svh);
+  z-index: 4;
+  pointer-events: auto;
+}
+
+.hero-3d-wrapper {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.hero-3d-canvas {
+  width: 100%;
+  height: 100%;
+  cursor: grab;
+}
+
+.hero-3d-canvas:active {
+  cursor: grabbing;
+}
+
+.hero-3d-loading {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  color: var(--gold);
+  font-family: var(--display);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 2px;
+}
+
+.hero-3d-spinner {
+  width: 36px;
+  height: 36px;
+  border: 2px solid rgba(212, 180, 124, 0.2);
+  border-top-color: var(--gold);
+  border-radius: 50%;
+  animation: modalScaleUp 0.8s linear infinite;
+}
+
+.hero-3d-error {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: #ff917e;
+  font-size: 12px;
+  background: rgba(17, 19, 17, 0.7);
+}
+
+.hero-3d-boss-badge {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  background: rgba(17, 19, 17, 0.88);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--red);
+  padding: 12px 20px;
+  pointer-events: none;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+  animation: modalScaleUp 0.3s ease-out;
+}
+
+.boss-badge-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--display);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 2px;
+  color: var(--gold);
+}
+
+.hero-3d-boss-badge h4 {
+  font: 800 24px/1.1 var(--display);
+  color: var(--cream);
+  margin: 5px 0 4px;
+  letter-spacing: 1px;
+}
+
+.boss-badge-meta {
+  font-size: 10px;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.badge-divider {
+  opacity: 0.4;
+}
+
+.loot-highlight {
+  color: #ff917e;
+  font-weight: 700;
+}
+
+.hero-3d-controls-hud {
+  position: absolute;
+  bottom: 38px;
+  left: 18px;
+  right: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  pointer-events: auto;
+}
+
+.anim-switch-group {
+  display: flex;
+  gap: 6px;
+  background: rgba(10, 12, 10, 0.7);
+  padding: 4px;
+  border-radius: 4px;
+  border: 1px solid var(--line);
+  backdrop-filter: blur(10px);
+}
+
+.anim-btn {
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--cream);
+  font-family: var(--display);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  padding: 6px 14px;
+  border-radius: 2px;
+  cursor: pointer;
+  transition: all .2s;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.anim-btn:hover {
+  background: rgba(234, 230, 218, 0.08);
+  color: var(--gold);
+}
+
+.anim-btn.active {
+  background: var(--red);
+  border-color: var(--red);
+  color: #fff;
+  box-shadow: 0 0 14px rgba(230, 77, 50, 0.45);
+}
+
+.view-ctrl-group {
+  display: flex;
+  gap: 6px;
+  background: rgba(10, 12, 10, 0.7);
+  padding: 4px;
+  border-radius: 4px;
+  border: 1px solid var(--line);
+  backdrop-filter: blur(10px);
+}
+
+.ctrl-icon-btn {
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--cream);
+  font-size: 13px;
+  cursor: pointer;
+  border-radius: 2px;
+  transition: all .2s;
+}
+
+.ctrl-icon-btn:hover {
+  background: rgba(234, 230, 218, 0.08);
+  color: var(--gold);
+}
+
+.ctrl-icon-btn.active {
+  color: var(--gold);
+  border-color: rgba(212, 180, 124, 0.4);
+}
+
+.hero-3d-hint {
+  position: absolute;
+  bottom: 14px;
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-size: 9.5px;
+  color: #c4c5b9;
+  letter-spacing: 0.8px;
+  pointer-events: none;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.9);
+}
+
+@media (max-width: 1024px) {
+  .hero-3d-stage {
+    position: relative;
+    right: auto;
+    top: auto;
+    transform: none;
+    width: 100%;
+    max-width: 500px;
+    height: 480px;
+    margin: 20px auto 0;
+  }
+}
+
+@media (max-width: 600px) {
+  .hero-3d-stage {
+    height: 380px;
+  }
+  .anim-btn {
+    padding: 5px 9px;
+    font-size: 10px;
+  }
+}

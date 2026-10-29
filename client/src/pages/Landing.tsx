@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { HERO_VIDEO_SRC } from '../heroVideo';
+import { Hero3DViewer } from '../components/Hero3DViewer';
 import '../marketing.css';
 
 /* Karakter verileri */
@@ -496,6 +497,11 @@ export function LandingPage() {
               </a>
             </div>
           </div>
+          {/* 3D Vahşi Uzman Canlı Sahne */}
+          <div className="hero-3d-stage">
+            <Hero3DViewer modelUrl="/assets/models/vahsi_uzman.glb" />
+          </div>
+
           <div className="hero-aside">
             <span>
               DOĞU'NUN EFSANESİ.
