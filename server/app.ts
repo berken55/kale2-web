@@ -14,7 +14,8 @@ import {
 } from '../shared/constants.ts';
 import type { BonusType, DashboardStats } from '../shared/types.ts';
 import { authRouter, requireAuth, type AuthConfig } from './auth.ts';
-import { registerAccount, getAccountCount, listAccounts } from './accounts.ts';
+import { registerAccount, getAccountCount, listAccounts, loginPlayer, getPlayerProfile, updatePlayerSpecialty } from './accounts.ts';
+import { createFeedback, listFeedbacks } from './feedbacks.ts';
 import { listMatches, getMatchDetail, listSessions, getMatchStats, getLeaderboard } from './matches.ts';
 import { importMatchLogs } from './match-logs.ts';
 import { logActivity, type DB } from './db.ts';
@@ -193,6 +194,59 @@ export function createApp({ db, uploadDir, auth, clientDir, publicWiki = true, i
   api.get('/public/leaderboard', (req, res) => {
     const limit = Math.min(50, Math.max(1, Number(req.query.limit) || 10));
     res.json(getLeaderboard(db, limit));
+  });
+
+  // ---- Beta Oyuncu Girişi & Profil & Geri Bildirim ----
+  api.post('/player/login', (req, res, next) => {
+    try {
+      const profile = loginPlayer(db, req.body ?? {});
+      res.json({ ok: true, profile });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  api.get('/player/profile/:id', (req, res, next) => {
+    try {
+      const id = Number(req.params.id);
+      if (!Number.isInteger(id) || id < 1) throw new HttpError(400, 'Gecersiz hesap id.');
+      const profile = getPlayerProfile(db, id);
+      if (!profile) throw new HttpError(404, 'Hesap bulunamadi.');
+      res.json({ ok: true, profile });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  api.patch('/player/specialty', (req, res, next) => {
+    try {
+      const accountId = Number(req.body?.accountId);
+      const specialty = String(req.body?.specialty || '');
+      if (!Number.isInteger(accountId) || accountId < 1) throw new HttpError(400, 'Gecersiz hesap.');
+      const profile = updatePlayerSpecialty(db, accountId, specialty);
+      res.json({ ok: true, profile });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  api.post('/player/feedback', (req, res, next) => {
+    try {
+      const item = createFeedback(db, req.body ?? {});
+      res.status(201).json({
+        ok: true,
+        message: 'Geri bildiriminiz basariyla alindi! KALE2 Beta gelisimine katkilariniz icin tesekkurler.',
+        item,
+      });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  api.get('/player/feedback', (req, res) => {
+    const accountId = req.query.accountId ? Number(req.query.accountId) : undefined;
+    const limit = Math.min(50, Math.max(1, Number(req.query.limit) || 20));
+    res.json(listFeedbacks(db, { accountId, limit }));
   });
 
   api.use('/auth', authRouter(auth));

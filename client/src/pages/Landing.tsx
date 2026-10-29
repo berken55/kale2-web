@@ -456,13 +456,16 @@ export function LandingPage() {
           <a href="#siralama" onClick={() => setMenuOpen(false)}>
             Sıralama
           </a>
+          <Link to="/feedback" onClick={() => setMenuOpen(false)}>
+            Beta Geri Bildirim
+          </Link>
           <Link to="/wiki" onClick={() => setMenuOpen(false)}>
             Wiki
           </Link>
         </nav>
-        <a href="#gelecek" className="nav-cta">
-          KAYIT OL <span aria-hidden="true">↗</span>
-        </a>
+        <Link to="/profil" className="nav-cta">
+          GİRİŞ / PROFİL <span aria-hidden="true">↗</span>
+        </Link>
         <button
           type="button"
           className="menu-toggle"

@@ -510,3 +510,49 @@ export interface LeaderboardEntry {
   maxLevel: number;
   tier: 'champion' | 'master' | 'diamond' | 'gold' | 'silver';
 }
+
+export type FeedbackCategory = 'bug' | 'balance' | 'feature' | 'performance' | 'general';
+export type FeedbackStatus = 'new' | 'reviewing' | 'resolved' | 'closed';
+
+export interface FeedbackItem {
+  id: number;
+  accountId: number | null;
+  playerName: string;
+  category: FeedbackCategory;
+  rating: number;
+  subject: string;
+  message: string;
+  status: FeedbackStatus;
+  createdAt: string;
+}
+
+export interface FeedbackInput {
+  accountId?: number | null;
+  playerName?: string;
+  category: FeedbackCategory;
+  rating?: number;
+  subject: string;
+  message: string;
+}
+
+export interface PlayerStats {
+  matchesPlayed: number;
+  wins: number;
+  winRate: number;
+  kills: number;
+  deaths: number;
+  assists: number;
+  kda: string;
+  totalHeroDamage: number;
+  maxLevel: number;
+}
+
+export interface PlayerProfile {
+  id: number;
+  username: string;
+  email: string;
+  specialty: string;
+  createdAt: string;
+  lastLoginAt: string | null;
+  stats?: PlayerStats;
+}

@@ -20,6 +20,7 @@ import { LoginPage } from './pages/Login';
 import { MonsterEditorPage } from './pages/MonsterEditor';
 import { MonsterListPage } from './pages/MonsterList';
 import { LandingPage } from './pages/Landing';
+import { ProfilePage } from './pages/Profile';
 import { WikiCategory } from './wiki/WikiCategory';
 import { WikiHome } from './wiki/WikiHome';
 import { WikiItem } from './wiki/WikiItem';
@@ -68,6 +69,9 @@ function App() {
   return (
     <Routes>
       <Route path="/" element={<LandingPage />} />
+      <Route path="profil" element={<ProfilePage />} />
+      <Route path="feedback" element={<ProfilePage />} />
+      <Route path="beta" element={<ProfilePage />} />
       {/* Oyunculara açık item wiki'si — giriş gerektirmez */}
       <Route path="wiki" element={<WikiLayout />}>
         <Route index element={<WikiHome />} />

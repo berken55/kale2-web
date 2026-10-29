@@ -152,3 +152,112 @@ export function listAccounts(db: DB, limit = 50, offset = 0): { items: AccountPu
     total,
   };
 }
+
+import type { PlayerProfile, PlayerStats } from '../shared/types.ts';
+
+export function loginPlayer(
+  db: DB,
+  raw: { identifier?: unknown; password?: unknown },
+): PlayerProfile {
+  const identifier = typeof raw.identifier === 'string' ? raw.identifier.trim() : '';
+  const password = typeof raw.password === 'string' ? raw.password : '';
+
+  if (!identifier) {
+    throw new HttpError(400, 'Kullanıcı adı veya e-posta adresi gereklidir.');
+  }
+  if (!password) {
+    throw new HttpError(400, 'Şifre gereklidir.');
+  }
+
+  const row = db
+    .prepare(
+      'SELECT id, username, email, password_hash, salt, specialty, created_at, last_login_at FROM accounts WHERE username = ? COLLATE NOCASE OR email = ? COLLATE NOCASE',
+    )
+    .get(identifier, identifier) as AccountRecord | undefined;
+
+  if (!row) {
+    throw new HttpError(401, 'Kullanıcı adı/e-posta veya şifre hatalı.');
+  }
+
+  const valid = verifyPassword(password, row.password_hash, row.salt);
+  if (!valid) {
+    throw new HttpError(401, 'Kullanıcı adı/e-posta veya şifre hatalı.');
+  }
+
+  // Son giriş zamanını güncelle
+  db.prepare("UPDATE accounts SET last_login_at = datetime('now') WHERE id = ?").run(row.id);
+
+  logActivity(db, 'login', 'account', row.id, 'Oyuncu girisi yapildi: ' + row.username);
+
+  return getPlayerProfile(db, row.id)!;
+}
+
+export function getPlayerProfile(db: DB, accountId: number): PlayerProfile | null {
+  const row = db
+    .prepare(
+      'SELECT id, username, email, specialty, created_at as createdAt, last_login_at as lastLoginAt FROM accounts WHERE id = ?',
+    )
+    .get(accountId) as (AccountPublic & { lastLoginAt: string | null }) | undefined;
+
+  if (!row) return null;
+
+  // Oyuncunun maç istatistiklerini çek (player_name veya account_id eşleşmesi)
+  const statsRow = db
+    .prepare(
+      'SELECT ' +
+        'COUNT(DISTINCT mp.match_id) as matchesPlayed, ' +
+        'SUM(COALESCE(mp.kills, 0)) as kills, ' +
+        'SUM(COALESCE(mp.deaths, 0)) as deaths, ' +
+        'SUM(COALESCE(mp.assists, 0)) as assists, ' +
+        'SUM(CASE WHEN mp.won = 1 THEN 1 ELSE 0 END) as wins, ' +
+        'ROUND(SUM(COALESCE(mp.dmg_hero, 0)), 0) as totalHeroDamage, ' +
+        'MAX(COALESCE(mp.level_end, 1)) as maxLevel ' +
+      'FROM match_players mp ' +
+      'WHERE mp.account_id = ? OR mp.player_name = ? COLLATE NOCASE',
+    )
+    .get(row.id, row.username) as Record<string, unknown> | undefined;
+
+  const matchesPlayed = Number(statsRow?.matchesPlayed || 0);
+  const wins = Number(statsRow?.wins || 0);
+  const kills = Number(statsRow?.kills || 0);
+  const deaths = Number(statsRow?.deaths || 0);
+  const assists = Number(statsRow?.assists || 0);
+  const totalHeroDamage = Number(statsRow?.totalHeroDamage || 0);
+  const maxLevel = Number(statsRow?.maxLevel || 1);
+
+  const winRate = matchesPlayed > 0 ? Math.round((wins / matchesPlayed) * 100) : 0;
+  const kda = deaths > 0 ? ((kills + assists) / deaths).toFixed(2) : String(kills + assists);
+
+  const stats: PlayerStats = {
+    matchesPlayed,
+    wins,
+    winRate,
+    kills,
+    deaths,
+    assists,
+    kda,
+    totalHeroDamage,
+    maxLevel,
+  };
+
+  return {
+    id: row.id,
+    username: row.username,
+    email: row.email,
+    specialty: row.specialty,
+    createdAt: row.createdAt,
+    lastLoginAt: row.lastLoginAt,
+    stats,
+  };
+}
+
+export function updatePlayerSpecialty(db: DB, accountId: number, rawSpecialty: string): PlayerProfile {
+  if (!ALLOWED_SPECIALTIES.has(rawSpecialty)) {
+    throw new HttpError(400, 'Geçersiz uzmanlık sınıfı.');
+  }
+
+  db.prepare('UPDATE accounts SET specialty = ? WHERE id = ?').run(rawSpecialty, accountId);
+  logActivity(db, 'update', 'account', accountId, 'Uzmanlik sinifi guncellendi: ' + rawSpecialty);
+
+  return getPlayerProfile(db, accountId)!;
+}

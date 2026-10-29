@@ -3628,3 +3628,625 @@ video.hero-art {
     order: 3;
   }
 }
+
+/* =====================================================================
+   OYUNCU PROFİLİ & BETA GERİ BİLDİRİM (PROFILE HUB & FEEDBACK)
+   ===================================================================== */
+.profile-hub-page {
+  min-height: 100vh;
+  background: #0d0f0d;
+}
+
+.profile-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 40px 24px 80px;
+}
+
+/* Header Oyuncu Rozeti */
+.header-player-pill {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(212, 180, 124, 0.12);
+  border: 1px solid rgba(212, 180, 124, 0.35);
+  padding: 6px 14px;
+  border-radius: 4px;
+  font-family: var(--font-display);
+  letter-spacing: 0.5px;
+}
+
+.header-player-pill b {
+  color: #eae6da;
+  font-size: 14px;
+}
+
+.logout-btn {
+  background: transparent;
+  border: none;
+  color: #e64d32;
+  font-size: 11px;
+  cursor: pointer;
+  padding: 2px 6px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  border-left: 1px solid rgba(255, 255, 255, 0.15);
+  margin-left: 6px;
+}
+
+.logout-btn:hover {
+  color: #ff6e52;
+}
+
+/* Giriş / Kayıt Kutusu */
+.auth-box-wrapper {
+  max-width: 540px;
+  margin: 20px auto 0;
+}
+
+.auth-card {
+  background: rgba(22, 25, 22, 0.95);
+  border: 1px solid rgba(212, 180, 124, 0.25);
+  box-shadow: 0 15px 45px rgba(0, 0, 0, 0.6);
+  padding: 32px 28px;
+}
+
+.auth-tabs {
+  display: flex;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  margin-bottom: 24px;
+}
+
+.auth-tab-btn {
+  flex: 1;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: #8c8f85;
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  padding: 12px 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.auth-tab-btn.active {
+  color: #d4b47c;
+  border-bottom-color: #d4b47c;
+  background: rgba(212, 180, 124, 0.05);
+}
+
+.auth-form h3 {
+  font-family: var(--font-display);
+  font-size: 26px;
+  color: #eae6da;
+  margin: 0 0 8px;
+  letter-spacing: 0.5px;
+}
+
+.auth-sub {
+  color: #9ea197;
+  font-size: 13.5px;
+  line-height: 1.5;
+  margin: 0 0 20px;
+}
+
+.auth-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-family: var(--font-display);
+  font-size: 11.5px;
+  letter-spacing: 1px;
+  color: #d4b47c;
+  margin-bottom: 16px;
+}
+
+.auth-form input,
+.auth-form select {
+  background: #111311;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  padding: 12px 14px;
+  color: #eae6da;
+  font-family: var(--font-body);
+  font-size: 14px;
+  border-radius: 2px;
+  transition: border-color 0.2s;
+}
+
+.auth-form input:focus,
+.auth-form select:focus {
+  outline: none;
+  border-color: #d4b47c;
+}
+
+.auth-submit {
+  width: 100%;
+  margin-top: 10px;
+  padding: 14px;
+  font-size: 14px;
+}
+
+.auth-switch-note {
+  text-align: center;
+  margin-top: 18px;
+  font-size: 13px;
+  color: #8c8f85;
+}
+
+.auth-switch-note button {
+  background: none;
+  border: none;
+  color: #d4b47c;
+  text-decoration: underline;
+  cursor: pointer;
+  padding: 0;
+  font-size: inherit;
+}
+
+/* HUB DÜZENİ */
+.hub-layout {
+  display: grid;
+  grid-template-columns: 360px 1fr;
+  gap: 32px;
+  align-items: start;
+}
+
+/* Sol Profil Kartı */
+.hub-profile-card {
+  background: rgba(20, 23, 20, 0.95);
+  border: 1px solid rgba(212, 180, 124, 0.25);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  padding: 24px;
+}
+
+.profile-hero-banner {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding-bottom: 20px;
+  margin-bottom: 20px;
+}
+
+.profile-char-thumb {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #d4b47c;
+  box-shadow: 0 0 15px rgba(212, 180, 124, 0.3);
+}
+
+.profile-hero-info h2 {
+  font-family: var(--font-display);
+  font-size: 24px;
+  color: #eae6da;
+  margin: 4px 0 2px;
+}
+
+.profile-tag {
+  font-family: var(--font-display);
+  font-size: 10.5px;
+  color: #d4b47c;
+  letter-spacing: 1px;
+}
+
+.profile-email {
+  font-size: 12px;
+  color: #7c7f76;
+}
+
+.profile-section-block {
+  margin-bottom: 22px;
+}
+
+.profile-section-block h4 {
+  font-family: var(--font-display);
+  font-size: 12px;
+  letter-spacing: 1.5px;
+  color: #d4b47c;
+  margin: 0 0 12px;
+  text-transform: uppercase;
+}
+
+.specialty-picker-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.spec-pick-btn {
+  background: #141714;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 10px 12px;
+  text-align: left;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.2s ease;
+}
+
+.spec-pick-btn:hover {
+  border-color: rgba(212, 180, 124, 0.4);
+}
+
+.spec-pick-btn.selected {
+  border-color: #d4b47c;
+  background: rgba(212, 180, 124, 0.08);
+}
+
+.spec-pick-title {
+  display: block;
+  font-family: var(--font-display);
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #eae6da;
+}
+
+.spec-pick-role {
+  display: block;
+  font-size: 11px;
+  color: #7c7f76;
+  margin-top: 2px;
+}
+
+.spec-active-badge {
+  position: absolute;
+  right: 10px;
+  top: 10px;
+  font-family: var(--font-display);
+  font-size: 10px;
+  font-weight: 700;
+  color: #d4b47c;
+  letter-spacing: 0.5px;
+}
+
+.hub-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+
+.hub-stat-item {
+  background: #111311;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  padding: 10px;
+}
+
+.hub-stat-item span {
+  display: block;
+  font-size: 9.5px;
+  color: #7c7f76;
+  letter-spacing: 0.8px;
+}
+
+.hub-stat-item strong {
+  font-family: var(--font-display);
+  font-size: 16px;
+  color: #eae6da;
+}
+
+.hub-stat-item small {
+  display: block;
+  font-size: 10px;
+  color: #9ea197;
+  margin-top: 2px;
+}
+
+.no-matches-box {
+  background: #111311;
+  border: 1px dashed rgba(255, 255, 255, 0.1);
+  padding: 14px;
+  text-align: center;
+}
+
+.no-matches-box p {
+  font-size: 12.5px;
+  color: #eae6da;
+  margin: 0 0 4px;
+}
+
+.no-matches-box small {
+  font-size: 11px;
+  color: #7c7f76;
+}
+
+.profile-meta-info {
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  padding-top: 16px;
+  font-size: 11.5px;
+  color: #7c7f76;
+}
+
+.logout-full {
+  width: 100%;
+  margin-top: 14px;
+  padding: 8px;
+  font-size: 11.5px;
+}
+
+/* Sağ Geri Bildirim Bölümü */
+.hub-feedback-section {
+  background: rgba(20, 23, 20, 0.95);
+  border: 1px solid rgba(212, 180, 124, 0.25);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  padding: 32px;
+}
+
+.feedback-header .sub-title {
+  font-family: var(--font-display);
+  font-size: 11px;
+  letter-spacing: 2px;
+  color: #d4b47c;
+  display: block;
+  margin-bottom: 6px;
+}
+
+.feedback-header h2 {
+  font-family: var(--font-display);
+  font-size: clamp(24px, 3.5vw, 36px);
+  color: #eae6da;
+  margin: 0 0 10px;
+  line-height: 1.1;
+}
+
+.feedback-header p {
+  font-size: 14px;
+  color: #9ea197;
+  line-height: 1.5;
+  margin: 0 0 24px;
+}
+
+.fb-alert {
+  padding: 12px 16px;
+  border-radius: 3px;
+  font-size: 13.5px;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.fb-alert.success {
+  background: rgba(74, 222, 128, 0.12);
+  border: 1px solid rgba(74, 222, 128, 0.4);
+  color: #86efac;
+}
+
+.fb-alert.error {
+  background: rgba(230, 77, 50, 0.12);
+  border: 1px solid rgba(230, 77, 50, 0.4);
+  color: #fca5a5;
+}
+
+.fb-field-group {
+  margin-bottom: 20px;
+}
+
+.fb-label {
+  display: block;
+  font-family: var(--font-display);
+  font-size: 11.5px;
+  letter-spacing: 1.2px;
+  color: #d4b47c;
+  margin-bottom: 8px;
+}
+
+.category-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.chip-btn {
+  background: #111311;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #c4c5b9;
+  padding: 8px 14px;
+  border-radius: 20px;
+  cursor: pointer;
+  font-size: 12.5px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+}
+
+.chip-btn:hover {
+  border-color: rgba(212, 180, 124, 0.5);
+}
+
+.chip-btn.active {
+  background: rgba(212, 180, 124, 0.18);
+  border-color: #d4b47c;
+  color: #f3d99d;
+}
+
+.star-rating-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.star-btn {
+  background: transparent;
+  border: none;
+  font-size: 26px;
+  color: rgba(255, 255, 255, 0.15);
+  cursor: pointer;
+  padding: 0;
+  transition: transform 0.15s, color 0.15s;
+}
+
+.star-btn:hover {
+  transform: scale(1.15);
+}
+
+.star-btn.filled {
+  color: #e6a23c;
+  text-shadow: 0 0 10px rgba(230, 162, 60, 0.5);
+}
+
+.rating-text {
+  font-size: 13px;
+  color: #9ea197;
+  margin-left: 10px;
+}
+
+.hub-feedback-form input,
+.hub-feedback-form textarea {
+  width: 100%;
+  background: #111311;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  padding: 12px 14px;
+  color: #eae6da;
+  font-family: var(--font-body);
+  font-size: 14px;
+  border-radius: 2px;
+  box-sizing: border-box;
+}
+
+.hub-feedback-form input:focus,
+.hub-feedback-form textarea:focus {
+  outline: none;
+  border-color: #d4b47c;
+}
+
+.fb-char-count {
+  display: block;
+  text-align: right;
+  font-size: 11px;
+  color: #7c7f76;
+  margin-top: 4px;
+}
+
+.fb-submit-btn {
+  padding: 14px 28px;
+  font-size: 14px;
+}
+
+/* Geçmiş Bildirimler */
+.past-feedbacks-wrap {
+  margin-top: 40px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  padding-top: 25px;
+}
+
+.past-feedbacks-wrap h3 {
+  font-family: var(--font-display);
+  font-size: 18px;
+  color: #eae6da;
+  letter-spacing: 0.5px;
+  margin: 0 0 16px;
+}
+
+.fb-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.fb-card-item {
+  background: #141714;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 14px 16px;
+  border-radius: 2px;
+}
+
+.fb-card-top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.fb-category-badge {
+  font-family: var(--font-display);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 2px;
+  text-transform: uppercase;
+}
+
+.fb-category-badge.bug {
+  background: rgba(239, 68, 68, 0.15);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.fb-category-badge.balance {
+  background: rgba(234, 179, 8, 0.15);
+  color: #fde047;
+  border: 1px solid rgba(234, 179, 8, 0.3);
+}
+
+.fb-category-badge.feature {
+  background: rgba(168, 85, 247, 0.15);
+  color: #c084fc;
+  border: 1px solid rgba(168, 85, 247, 0.3);
+}
+
+.fb-category-badge.performance {
+  background: rgba(56, 189, 248, 0.15);
+  color: #7dd3fc;
+  border: 1px solid rgba(56, 189, 248, 0.3);
+}
+
+.fb-category-badge.general {
+  background: rgba(212, 180, 124, 0.15);
+  color: #f3d99d;
+  border: 1px solid rgba(212, 180, 124, 0.3);
+}
+
+.fb-stars {
+  color: #e6a23c;
+  font-size: 13px;
+  letter-spacing: 1px;
+}
+
+.fb-date {
+  font-size: 11px;
+  color: #7c7f76;
+  margin-left: auto;
+}
+
+.fb-card-subject {
+  color: #eae6da;
+  font-size: 14.5px;
+  margin: 0 0 6px;
+}
+
+.fb-card-message {
+  color: #9ea197;
+  font-size: 13px;
+  line-height: 1.5;
+  margin: 0 0 10px;
+}
+
+.fb-card-foot {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+  color: #7c7f76;
+}
+
+.fb-status-pill {
+  font-family: var(--font-display);
+  font-size: 10px;
+  letter-spacing: 0.8px;
+  padding: 2px 7px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.05);
+  color: #d4b47c;
+  border: 1px solid rgba(212, 180, 124, 0.2);
+}
+
+@media (max-width: 960px) {
+  .hub-layout {
+    grid-template-columns: 1fr;
+  }
+}

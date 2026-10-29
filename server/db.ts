@@ -354,6 +354,21 @@ CREATE TABLE IF NOT EXISTS match_log_files (
   done       INTEGER NOT NULL DEFAULT 0,
   updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
+
+-- Beta Geri Bildirimleri (Feedback)
+CREATE TABLE IF NOT EXISTS feedbacks (
+  id          INTEGER PRIMARY KEY AUTOINCREMENT,
+  account_id  INTEGER REFERENCES accounts(id) ON DELETE SET NULL,
+  player_name TEXT NOT NULL,
+  category    TEXT NOT NULL,
+  rating      INTEGER DEFAULT 5,
+  subject     TEXT NOT NULL,
+  message     TEXT NOT NULL,
+  status      TEXT NOT NULL DEFAULT 'new',
+  created_at  TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_feedbacks_account ON feedbacks(account_id);
+CREATE INDEX IF NOT EXISTS idx_feedbacks_created ON feedbacks(created_at DESC);
 `;
 
 export function openDatabase(file: string): DB {
