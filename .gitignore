@@ -8,3 +8,4 @@ uploads-private/
 __pycache__/
 *.pyc
 downloads/
+/patches/

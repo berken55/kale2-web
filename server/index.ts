@@ -33,6 +33,7 @@ const db = openDatabase(path.join(dataDir, 'kale2.db'));
 const app = createApp({
   db,
   uploadDir,
+  patchDir: path.resolve(root, process.env.PATCH_DIR ?? 'patches'),
   importPrivateDir: path.join(dataDir, 'import-private'),
   auth: { username, password, secret, secureCookie: process.env.COOKIE_SECURE === 'true' },
   publicWiki: process.env.PUBLIC_WIKI !== 'false',
