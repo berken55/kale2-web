@@ -257,6 +257,103 @@ CREATE TABLE IF NOT EXISTS accounts (
 
 CREATE INDEX IF NOT EXISTS idx_accounts_username ON accounts(username);
 CREATE INDEX IF NOT EXISTS idx_accounts_email ON accounts(email);
+
+-- Oyun sunucusunun maç ve oturum günlükleri (JSONL, server/match-logs.ts aktarır). Denge incelemesi için.
+-- Oyuncu oyunda adla tanınır; ad bir hesapla eşleşiyorsa account_id dolar.
+CREATE TABLE IF NOT EXISTS game_sessions (
+  id           INTEGER PRIMARY KEY AUTOINCREMENT,
+  session_key  TEXT NOT NULL UNIQUE,             -- sunucunun verdiği oturum kimliği
+  player_name  TEXT NOT NULL,
+  account_id   INTEGER REFERENCES accounts(id) ON DELETE SET NULL,
+  class        TEXT NOT NULL DEFAULT '',
+  spec         TEXT NOT NULL DEFAULT '',
+  level_start  INTEGER NOT NULL DEFAULT 1,
+  level_end    INTEGER,
+  matches      INTEGER NOT NULL DEFAULT 0,
+  game_version TEXT NOT NULL DEFAULT '',
+  protocol     INTEGER,
+  joined_at    TEXT NOT NULL,
+  left_at      TEXT,                             -- NULL: hâlâ bağlı ya da sunucu kapandı
+  duration_s   REAL
+);
+CREATE INDEX IF NOT EXISTS idx_game_sessions_player ON game_sessions(player_name COLLATE NOCASE, joined_at);
+
+CREATE TABLE IF NOT EXISTS matches (
+  id           INTEGER PRIMARY KEY AUTOINCREMENT,
+  match_key    TEXT NOT NULL UNIQUE,             -- sunucunun verdiği maç kimliği
+  started_at   TEXT NOT NULL,
+  ended_at     TEXT,
+  duration_s   REAL NOT NULL DEFAULT 0,
+  status       TEXT NOT NULL,                    -- finished | aborted (herkes çıktı) | crashed (kapanış yok)
+  winner       TEXT,                             -- light | dark
+  game_version TEXT NOT NULL DEFAULT '',
+  protocol     INTEGER,
+  player_count INTEGER NOT NULL DEFAULT 0,
+  light_kills  INTEGER NOT NULL DEFAULT 0,
+  dark_kills   INTEGER NOT NULL DEFAULT 0,
+  titles       TEXT NOT NULL DEFAULT '{}'
+);
+CREATE INDEX IF NOT EXISTS idx_matches_started ON matches(started_at);
+
+CREATE TABLE IF NOT EXISTS match_players (
+  match_id      INTEGER NOT NULL REFERENCES matches(id) ON DELETE CASCADE,
+  player_name   TEXT NOT NULL,
+  account_id    INTEGER REFERENCES accounts(id) ON DELETE SET NULL,
+  team          TEXT NOT NULL DEFAULT '',
+  class         TEXT NOT NULL DEFAULT '',
+  spec          TEXT NOT NULL DEFAULT '',
+  level_start   INTEGER NOT NULL DEFAULT 1,
+  level_end     INTEGER NOT NULL DEFAULT 1,
+  kills         INTEGER NOT NULL DEFAULT 0,
+  deaths        INTEGER NOT NULL DEFAULT 0,
+  assists       INTEGER NOT NULL DEFAULT 0,
+  xp            INTEGER NOT NULL DEFAULT 0,
+  yang          INTEGER NOT NULL DEFAULT 0,
+  dmg_hero      REAL NOT NULL DEFAULT 0,
+  dmg_mob       REAL NOT NULL DEFAULT 0,
+  dmg_structure REAL NOT NULL DEFAULT 0,
+  rewards       TEXT NOT NULL DEFAULT '{}',      -- türe göre {"mob": [xp, yang], "kill": [...], ...}
+  won           INTEGER,                         -- NULL: kazananı olmayan maç
+  PRIMARY KEY (match_id, player_name)
+);
+CREATE INDEX IF NOT EXISTS idx_match_players_player ON match_players(player_name COLLATE NOCASE);
+CREATE INDEX IF NOT EXISTS idx_match_players_class ON match_players(class, spec);
+
+-- Dakikada bir oyuncu durumu: maç içi gelişim eğrisi
+CREATE TABLE IF NOT EXISTS match_snapshots (
+  match_id      INTEGER NOT NULL REFERENCES matches(id) ON DELETE CASCADE,
+  t             REAL NOT NULL,
+  player_name   TEXT NOT NULL,
+  team          TEXT NOT NULL DEFAULT '',
+  level         INTEGER NOT NULL DEFAULT 1,
+  xp            INTEGER NOT NULL DEFAULT 0,
+  yang          INTEGER NOT NULL DEFAULT 0,
+  kills         INTEGER NOT NULL DEFAULT 0,
+  deaths        INTEGER NOT NULL DEFAULT 0,
+  assists       INTEGER NOT NULL DEFAULT 0,
+  dmg_hero      REAL NOT NULL DEFAULT 0,
+  dmg_mob       REAL NOT NULL DEFAULT 0,
+  dmg_structure REAL NOT NULL DEFAULT 0,
+  PRIMARY KEY (match_id, t, player_name)
+);
+
+-- Maç olayları (katılma, ayrılma, seviye, öldürme, yapı); ayrıntı JSON
+CREATE TABLE IF NOT EXISTS match_events (
+  id       INTEGER PRIMARY KEY AUTOINCREMENT,
+  match_id INTEGER NOT NULL REFERENCES matches(id) ON DELETE CASCADE,
+  t        REAL NOT NULL,
+  ev       TEXT NOT NULL,
+  data     TEXT NOT NULL DEFAULT '{}'
+);
+CREATE INDEX IF NOT EXISTS idx_match_events_match ON match_events(match_id, ev);
+
+-- Aktarıcının kaldığı yer: oturum dosyasında okunan bayt, maç dosyası aktarıldı mı
+CREATE TABLE IF NOT EXISTS match_log_files (
+  file       TEXT PRIMARY KEY,
+  offset     INTEGER NOT NULL DEFAULT 0,
+  done       INTEGER NOT NULL DEFAULT 0,
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
 `;
 
 export function openDatabase(file: string): DB {

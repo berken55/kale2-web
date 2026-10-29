@@ -2,6 +2,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createApp } from './app.ts';
 import { openDatabase } from './db.ts';
+import { importMatchLogs } from './match-logs.ts';
 
 try {
   process.loadEnvFile?.('.env');
@@ -38,6 +39,22 @@ const app = createApp({
   gameToken: process.env.GAME_API_TOKEN || undefined,
   clientDir: isProd ? path.join(root, 'dist/client') : undefined,
 });
+
+// Oyun sunucusunun maç / oturum günlükleri: açılışta ve dakikada bir aktarılır
+const matchLogDir = process.env.MATCH_LOG_DIR;
+if (matchLogDir) {
+  const runImport = () => {
+    try {
+      const r = importMatchLogs(db, matchLogDir);
+      if (r.matches || r.sessions) console.log(`Maç günlükleri: ${r.matches} maç, ${r.sessions} oturum satırı aktarıldı`);
+      for (const e of r.errors) console.warn('Maç günlüğü:', e);
+    } catch (err) {
+      console.warn('Maç günlüğü aktarılamadı:', err);
+    }
+  };
+  runImport();
+  setInterval(runImport, 60_000).unref();
+}
 
 app.listen(port, host, () => {
   console.log(`Kale2 yönetim paneli API'si http://localhost:${port} adresinde çalışıyor`);

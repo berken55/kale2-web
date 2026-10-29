@@ -1,0 +1,4 @@
+{"class":"warrior","ev":"session_join","level":1,"name":"Ayse","peer":417627503,"protocol":10,"session":"20261029-075627-417627503","spec":"warrior_body","ts":"2026-10-29T07:56:40","version":"0.9.0-beta"}
+{"class":"warrior","ev":"session_join","level":1,"name":"Burak","peer":1745912518,"protocol":10,"session":"20261029-075627-1745912518","spec":"warrior_body","ts":"2026-10-29T07:56:40","version":"0.9.0-beta"}
+{"duration":88.6,"ev":"session_leave","level":1,"level_start":1,"matches":1,"name":"Burak","peer":1745912518,"session":"20261029-075627-1745912518","ts":"2026-10-29T07:58:09"}
+{"duration":89.2,"ev":"session_leave","level":1,"level_start":1,"matches":1,"name":"Ayse","peer":417627503,"session":"20261029-075627-417627503","ts":"2026-10-29T07:58:10"}

@@ -1,0 +1,9 @@
+{"ev":"match_start","match":"20261029-075645-4329","protocol":10,"t":0.0,"ts":"2026-10-29T07:56:45","version":"0.9.0-beta"}
+{"class":"warrior","ev":"join","level":1,"match":"20261029-075645-4329","name":"Ayse","peer":417627503,"spec":"warrior_body","t":0.0,"team":"light"}
+{"class":"warrior","ev":"join","level":1,"match":"20261029-075645-4329","name":"Burak","peer":1745912518,"spec":"warrior_body","t":0.0,"team":"dark"}
+{"ev":"snapshot","match":"20261029-075645-4329","players":[{"assists":0,"deaths":0,"dmg_hero":0.0,"dmg_mob":0.0,"dmg_structure":0.0,"kills":0,"level":1,"name":"Ayse","team":"light","xp":0,"yang":0},{"assists":0,"deaths":0,"dmg_hero":0.0,"dmg_mob":0.0,"dmg_structure":0.0,"kills":0,"level":1,"name":"Burak","team":"dark","xp":0,"yang":0}],"t":63.5}
+{"ev":"leave","match":"20261029-075645-4329","name":"Burak","peer":1745912518,"reason":"disconnect","t":84.1}
+{"ev":"leave","match":"20261029-075645-4329","name":"Ayse","peer":417627503,"reason":"disconnect","t":84.7}
+{"ev":"snapshot","match":"20261029-075645-4329","players":[],"t":84.7}
+{"duration":84.7,"ev":"match_abort","match":"20261029-075645-4329","players":[{"assists":0,"class":"warrior","deaths":0,"kills":0,"level":1,"level_start":1,"name":"Ayse","present":false,"spec":"warrior_body","team":"light","xp":0,"yang":0},{"assists":0,"class":"warrior","deaths":0,"kills":0,"level":1,"level_start":1,"name":"Burak","present":false,"spec":"warrior_body","team":"dark","xp":0,"yang":0}],"t":84.7}
+{"ev":"match_close","match":"20261029-075645-4329","t":84.7,"ts":"2026-10-29T07:58:10"}
