@@ -393,3 +393,103 @@ export interface GameMapDetail extends GameMap {
   regions: SpawnRegion[];
   monsters: Record<number, SpawnMonsterRef>;
 }
+
+// ---- Maç ve Oturum Günlükleri ----
+export interface MatchSummary {
+  id: number;
+  matchKey: string;
+  startedAt: string;
+  endedAt: string | null;
+  durationSeconds: number;
+  status: 'finished' | 'aborted' | 'crashed';
+  winner: 'light' | 'dark' | null;
+  gameVersion: string;
+  protocol: number | null;
+  playerCount: number;
+  lightKills: number;
+  darkKills: number;
+  titles: Record<string, string>;
+}
+
+export interface MatchPlayer {
+  matchId: number;
+  playerName: string;
+  accountId: number | null;
+  accountEmail?: string | null;
+  team: 'light' | 'dark' | string;
+  class: string;
+  spec: string;
+  levelStart: number;
+  levelEnd: number;
+  kills: number;
+  deaths: number;
+  assists: number;
+  xp: number;
+  yang: number;
+  dmgHero: number;
+  dmgMob: number;
+  dmgStructure: number;
+  rewards: Record<string, unknown>;
+  won: boolean | null;
+}
+
+export interface MatchEvent {
+  id: number;
+  matchId: number;
+  t: number;
+  ev: 'join' | 'leave' | 'level' | 'kill' | 'structure_down' | string;
+  data: Record<string, any>;
+}
+
+export interface MatchSnapshot {
+  matchId: number;
+  t: number;
+  playerName: string;
+  team: string;
+  level: number;
+  xp: number;
+  yang: number;
+  kills: number;
+  deaths: number;
+  assists: number;
+  dmgHero: number;
+  dmgMob: number;
+  dmgStructure: number;
+}
+
+export interface MatchDetail extends MatchSummary {
+  players: MatchPlayer[];
+  events: MatchEvent[];
+  snapshots: MatchSnapshot[];
+}
+
+export interface GameSession {
+  id: number;
+  sessionKey: string;
+  playerName: string;
+  accountId: number | null;
+  accountEmail?: string | null;
+  class: string;
+  spec: string;
+  levelStart: number;
+  levelEnd: number | null;
+  matches: number;
+  gameVersion: string;
+  protocol: number | null;
+  joinedAt: string;
+  leftAt: string | null;
+  durationSeconds: number | null;
+}
+
+export interface MatchStats {
+  totalMatches: number;
+  finishedMatches: number;
+  abortedMatches: number;
+  crashedMatches: number;
+  avgDurationSeconds: number;
+  lightWins: number;
+  darkWins: number;
+  totalSessions: number;
+  uniquePlayers: number;
+  activeSessions: number;
+}

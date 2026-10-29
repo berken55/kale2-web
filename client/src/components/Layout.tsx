@@ -5,6 +5,7 @@ import { Brand } from './ui';
 
 const NAV = [
   { to: '/admin', label: 'Genel Bakış', end: true, icon: 'M3 12l9-9 9 9M5 10v10h5v-6h4v6h5V10' },
+  { to: '/admin/matches', label: 'Maçlar & Oturumlar', end: false, icon: 'M13 10V3L4 14h7v7l9-11h-7z' },
   { to: '/admin/items', label: 'Itemler', end: false, icon: 'M14.5 3.5l6 6L9 21H3v-6zM12 6l6 6' },
   { to: '/admin/monsters', label: 'Canavarlar', end: false, icon: 'M5 9l2-5 3 4h4l3-4 2 5v4a7 7 0 01-14 0zM9 13h.01M15 13h.01M10 17h4' },
   { to: '/admin/drop-groups', label: 'Drop Grupları', end: false, icon: 'M4 7l8-4 8 4-8 4zM4 12l8 4 8-4M4 17l8 4 8-4' },

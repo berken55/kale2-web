@@ -15,6 +15,8 @@ import {
 import type { BonusType, DashboardStats } from '../shared/types.ts';
 import { authRouter, requireAuth, type AuthConfig } from './auth.ts';
 import { registerAccount, getAccountCount, listAccounts } from './accounts.ts';
+import { listMatches, getMatchDetail, listSessions, getMatchStats } from './matches.ts';
+import { importMatchLogs } from './match-logs.ts';
 import { logActivity, type DB } from './db.ts';
 import { dropsRouter, dropUsageOfItem } from './drops.ts';
 import { HttpError } from './http-error.ts';
@@ -200,6 +202,48 @@ export function createApp({ db, uploadDir, auth, clientDir, publicWiki = true, i
     const pageSize = Math.min(100, Math.max(1, Number(req.query.pageSize) || 20));
     const offset = (page - 1) * pageSize;
     res.json(listAccounts(db, pageSize, offset));
+  });
+
+  // ---- Admin: Maçlar ve Oturumlar ----
+  api.get('/matches/stats', (_req, res) => {
+    res.json(getMatchStats(db));
+  });
+
+  api.get('/matches', (req, res) => {
+    res.json(
+      listMatches(db, {
+        status: req.query.status as string | undefined,
+        search: req.query.search as string | undefined,
+        page: Number(req.query.page) || 1,
+        pageSize: Number(req.query.pageSize) || 20,
+      }),
+    );
+  });
+
+  api.get('/matches/:id', (req, res) => {
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id) || id < 1) throw new HttpError(400, 'Geçersiz maç id.');
+    const match = getMatchDetail(db, id);
+    if (!match) throw new HttpError(404, 'Maç bulunamadı.');
+    res.json(match);
+  });
+
+  api.get('/sessions', (req, res) => {
+    res.json(
+      listSessions(db, {
+        search: req.query.search as string | undefined,
+        class: req.query.class as string | undefined,
+        page: Number(req.query.page) || 1,
+        pageSize: Number(req.query.pageSize) || 25,
+      }),
+    );
+  });
+
+  api.post('/matches/import', (_req, res) => {
+    const dir = process.env.MATCH_LOG_DIR;
+    if (!dir) throw new HttpError(400, 'MATCH_LOG_DIR ortam değişkeni tanımlı değil.');
+    const result = importMatchLogs(db, dir);
+    res.json(result);
   });
 
   // ---- Dashboard ----

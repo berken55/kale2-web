@@ -12,6 +12,8 @@ import { LevelDropsPage } from './pages/LevelDrops';
 import { ReleasesPage } from './pages/Releases';
 import { MapEditorPage } from './pages/MapEditor';
 import { MapListPage } from './pages/Maps';
+import { MatchesPage } from './pages/Matches';
+import { MatchDetailPage } from './pages/MatchDetail';
 import { ItemEditorPage } from './pages/ItemEditor';
 import { ItemListPage } from './pages/ItemList';
 import { LoginPage } from './pages/Login';
@@ -39,6 +41,8 @@ function AdminApp() {
     <Routes>
       <Route element={<Layout />}>
         <Route index element={<DashboardPage />} />
+        <Route path="matches" element={<MatchesPage />} />
+        <Route path="matches/:id" element={<MatchDetailPage />} />
         <Route path="items" element={<ItemListPage />} />
         <Route path="items/new" element={<ItemEditorPage />} />
         <Route path="items/:id" element={<ItemEditorPage />} />
