@@ -8,6 +8,8 @@ interface Hero3DViewerProps {
   className?: string;
 }
 
+type SequencePhase = 'IDLE' | 'APPROACH' | 'ATTACK' | 'TURN_AWAY' | 'RETREAT' | 'TURN_BACK';
+
 export function Hero3DViewer({
   modelUrl = '/assets/models/vahsi_uzman.glb',
   className = '',
@@ -15,15 +17,26 @@ export function Hero3DViewer({
   const mountRef = useRef<HTMLDivElement>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [autoRotate, setAutoRotate] = useState(true);
   const [activeAnim, setActiveAnim] = useState<string>('WAIT');
+  const [sequenceActive, setSequenceActive] = useState<boolean>(true);
+  const [phaseLabel, setPhaseLabel] = useState<string>('Nefes Alıyor...');
 
   const controlsRef = useRef<OrbitControls | null>(null);
   const mixerRef = useRef<THREE.AnimationMixer | null>(null);
   const actionsRef = useRef<Record<string, THREE.AnimationAction>>({});
+  const currentActionRef = useRef<THREE.AnimationAction | null>(null);
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
-  const initialPosRef = useRef<THREE.Vector3>(new THREE.Vector3(0.5, 1.3, 3.2));
-  const initialTargetRef = useRef<THREE.Vector3>(new THREE.Vector3(0, 0.95, 0));
+  const actorGroupRef = useRef<THREE.Group | null>(null);
+  const rimLightRef = useRef<THREE.DirectionalLight | null>(null);
+
+  const initialCamPosRef = useRef<THREE.Vector3>(new THREE.Vector3(0, 0.05, 3.5));
+  const initialTargetRef = useRef<THREE.Vector3>(new THREE.Vector3(0, 0, 0));
+  const sequenceActiveRef = useRef<boolean>(true);
+
+  // Sync ref with state
+  useEffect(() => {
+    sequenceActiveRef.current = sequenceActive;
+  }, [sequenceActive]);
 
   useEffect(() => {
     const mount = mountRef.current;
@@ -35,17 +48,18 @@ export function Hero3DViewer({
     // 1. Scene
     const scene = new THREE.Scene();
 
-    // 2. Camera
+    // 2. Camera centered directly in front of (0, 0, 0)
     const camera = new THREE.PerspectiveCamera(
-      42,
+      40,
       mount.clientWidth / Math.max(mount.clientHeight, 1),
       0.1,
       100
     );
-    camera.position.copy(initialPosRef.current);
+    camera.position.copy(initialCamPosRef.current);
+    camera.lookAt(initialTargetRef.current);
     cameraRef.current = camera;
 
-    // 3. Renderer with transparent background
+    // 3. WebGL Renderer with alpha transparency
     const renderer = new THREE.WebGLRenderer({
       antialias: true,
       alpha: true,
@@ -55,69 +69,76 @@ export function Hero3DViewer({
     renderer.setSize(mount.clientWidth, mount.clientHeight);
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.25;
+    renderer.toneMappingExposure = 1.3;
     mount.appendChild(renderer.domElement);
 
-    // 4. Atmospheric Lights
-    const ambientLight = new THREE.HemisphereLight(0xffedd5, 0x141a15, 1.8);
+    // 4. Atmospheric Lights (No platform beneath, pure floating character lighting)
+    const ambientLight = new THREE.HemisphereLight(0xffedd5, 0x0e120f, 2.2);
     scene.add(ambientLight);
 
-    // Warm golden key light from top-right
-    const keyLight = new THREE.DirectionalLight(0xffdfa8, 3.0);
-    keyLight.position.set(3.5, 4.5, 3);
+    // Key Light from top-right
+    const keyLight = new THREE.DirectionalLight(0xffdfa8, 3.4);
+    keyLight.position.set(3.5, 4.0, 3.0);
     scene.add(keyLight);
 
-    // Menacing red/ruby rim light from back-left for game boss silhouette
+    // Dramatic red/ruby rim light from back-left
     const rimLight = new THREE.DirectionalLight(0xe64d32, 2.8);
     rimLight.position.set(-3.5, 2.5, -2.5);
     scene.add(rimLight);
+    rimLightRef.current = rimLight;
 
     // Cool front fill light
-    const fillLight = new THREE.DirectionalLight(0x7391b4, 1.2);
-    fillLight.position.set(-2, 1.5, 2.5);
+    const fillLight = new THREE.DirectionalLight(0x7391b4, 1.4);
+    fillLight.position.set(-2.5, 1.2, 3.0);
     scene.add(fillLight);
 
-    // Golden pedestal base
-    const pedestalGroup = new THREE.Group();
-    const pedestalGeo = new THREE.CylinderGeometry(1.15, 1.25, 0.05, 36);
-    const pedestalMat = new THREE.MeshStandardMaterial({
-      color: 0x141714,
-      metalness: 0.85,
-      roughness: 0.35,
-      emissive: 0xd4b47c,
-      emissiveIntensity: 0.06,
-    });
-    const pedestal = new THREE.Mesh(pedestalGeo, pedestalMat);
-    pedestal.position.y = -0.025;
-    pedestalGroup.add(pedestal);
+    // Subtle bottom bounce light for dramatic under-chin shadow fill
+    const bottomFill = new THREE.PointLight(0xd4b47c, 1.0, 6);
+    bottomFill.position.set(0, -1.8, 1.0);
+    scene.add(bottomFill);
 
-    // Pedestal gold accent ring
-    const ringGeo = new THREE.RingGeometry(1.16, 1.24, 48);
-    const ringMat = new THREE.MeshBasicMaterial({
-      color: 0xd4b47c,
-      side: THREE.DoubleSide,
-      transparent: true,
-      opacity: 0.5,
-    });
-    const ring = new THREE.Mesh(ringGeo, ringMat);
-    ring.rotation.x = -Math.PI / 2;
-    ring.position.y = 0.005;
-    pedestalGroup.add(ring);
-    scene.add(pedestalGroup);
+    // 5. Actor Group (Container for centering & position animation)
+    const actorGroup = new THREE.Group();
+    scene.add(actorGroup);
+    actorGroupRef.current = actorGroup;
 
-    // 5. Controls
+    // 6. OrbitControls (auto-rotate disabled by default so the monster runs directly towards the user)
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
     controls.dampingFactor = 0.06;
-    controls.autoRotate = true;
-    controls.autoRotateSpeed = 1.2;
+    controls.autoRotate = false;
     controls.target.copy(initialTargetRef.current);
-    controls.minDistance = 1.5;
-    controls.maxDistance = 5.2;
-    controls.maxPolarAngle = Math.PI / 2 + 0.04;
+    controls.minDistance = 1.4;
+    controls.maxDistance = 5.5;
+    controls.maxPolarAngle = Math.PI / 2 + 0.15;
     controlsRef.current = controls;
 
-    // 6. Load Model
+    // Smooth crossfade helper
+    const playAnim = (clipName: string, duration = 0.2, timeScale = 1) => {
+      const actions = actionsRef.current;
+      const targetAction = actions[clipName];
+      if (!targetAction) return;
+
+      const current = currentActionRef.current;
+      if (current === targetAction && current.isRunning()) {
+        targetAction.setEffectiveTimeScale(timeScale);
+        return;
+      }
+
+      targetAction.reset();
+      targetAction.setEffectiveTimeScale(timeScale);
+      targetAction.setEffectiveWeight(1);
+      targetAction.fadeIn(duration).play();
+
+      if (current && current !== targetAction) {
+        current.fadeOut(duration);
+      }
+
+      currentActionRef.current = targetAction;
+      setActiveAnim(clipName);
+    };
+
+    // 7. Load GLTF Model
     const loader = new GLTFLoader();
     loader.load(
       modelUrl,
@@ -125,21 +146,23 @@ export function Hero3DViewer({
         if (disposed) return;
         const model = gltf.scene;
 
-        // Bounding box & centering
-        const box = new THREE.Box3().setFromObject(model);
-        const size = box.getSize(new THREE.Vector3());
-        const center = box.getCenter(new THREE.Vector3());
+        // Find body mesh or calculate full bounding box
+        const bodyObj = model.getObjectByName('jh') || model;
+        const bodyBox = new THREE.Box3().setFromObject(bodyObj);
+        const bodySize = bodyBox.getSize(new THREE.Vector3());
+        const bodyCenter = bodyBox.getCenter(new THREE.Vector3());
 
-        const maxDim = Math.max(size.x, size.y, size.z) || 1;
-        const scale = 1.85 / maxDim;
+        // Target height ~2.15 units so monster fills the viewport center with majesty
+        const maxDim = Math.max(bodySize.y, 1);
+        const scale = 2.15 / maxDim;
         model.scale.setScalar(scale);
 
-        // Center on X and Z, place feet right on the pedestal
-        model.position.x = -center.x * scale;
-        model.position.z = -center.z * scale;
-        model.position.y = -box.min.y * scale;
+        // Center the model's mid-torso exactly at (0, 0, 0) of actorGroup
+        model.position.x = -bodyCenter.x * scale;
+        model.position.y = -bodyCenter.y * scale;
+        model.position.z = -bodyCenter.z * scale;
 
-        // Enhance material reflections
+        // Materials optimization
         model.traverse((child) => {
           if ((child as THREE.Mesh).isMesh) {
             const mesh = child as THREE.Mesh;
@@ -147,30 +170,35 @@ export function Hero3DViewer({
             mesh.receiveShadow = true;
             if (mesh.material) {
               const mat = mesh.material as THREE.MeshStandardMaterial;
-              mat.roughness = Math.max(mat.roughness, 0.4);
-              mat.envMapIntensity = 1.2;
+              mat.roughness = Math.max(mat.roughness, 0.38);
+              mat.envMapIntensity = 1.3;
             }
           }
         });
 
-        scene.add(model);
+        actorGroup.add(model);
 
-        // Animation mixer
+        // Setup Animations
         if (gltf.animations && gltf.animations.length > 0) {
           const mixer = new THREE.AnimationMixer(model);
           mixerRef.current = mixer;
           const actions: Record<string, THREE.AnimationAction> = {};
 
           gltf.animations.forEach((clip) => {
-            actions[clip.name] = mixer.clipAction(clip);
+            const action = mixer.clipAction(clip);
+            if (clip.name === 'NORMAL_ATTACK') {
+              action.setLoop(THREE.LoopOnce, 1);
+              action.clampWhenFinished = true;
+            } else {
+              action.setLoop(THREE.LoopRepeat, Infinity);
+            }
+            actions[clip.name] = action;
           });
 
           actionsRef.current = actions;
 
-          // Default animation: WAIT
-          const startAnim = actions['WAIT'] ? 'WAIT' : gltf.animations[0].name;
-          actions[startAnim]?.play();
-          setActiveAnim(startAnim);
+          // Start in WAIT animation
+          playAnim('WAIT', 0.1);
         }
 
         setLoading(false);
@@ -197,15 +225,124 @@ export function Hero3DViewer({
     const resizeObserver = new ResizeObserver(handleResize);
     resizeObserver.observe(mount);
 
+    // Cinematic Sequence Parameters
+    const Z_FAR = -1.6;  // Origin / resting distance
+    const Z_NEAR = 0.55; // Close-up attack point near camera
+
+    const T_IDLE = 1.4;       // Pause in WAIT stance
+    const T_APPROACH = 1.8;   // Charge forward in RUN
+    const T_ATTACK = 2.17;    // Swing sword in NORMAL_ATTACK
+    const T_TURN_AWAY = 0.35; // Pivot 180 deg to retreat
+    const T_RETREAT = 1.8;    // Run back to original distance
+    const T_TURN_BACK = 0.35; // Pivot 180 deg to face front
+
+    let phase: SequencePhase = 'IDLE';
+    let phaseTime = 0;
+
     // Render loop
     const clock = new THREE.Clock();
+
     const animate = () => {
       animationFrameId = requestAnimationFrame(animate);
-      const delta = clock.getDelta();
+      const delta = Math.min(clock.getDelta(), 0.1);
+
       mixerRef.current?.update(delta);
+
+      // Cinematic sequence state machine
+      if (sequenceActiveRef.current && actorGroupRef.current) {
+        phaseTime += delta;
+        const actor = actorGroupRef.current;
+
+        if (phase === 'IDLE') {
+          actor.position.z = Z_FAR;
+          actor.rotation.y = 0;
+          if (phaseTime >= T_IDLE) {
+            phase = 'APPROACH';
+            phaseTime = 0;
+            setPhaseLabel('Kameraya Yaklaşıyor...');
+            playAnim('RUN', 0.25, 1.15);
+          }
+        } else if (phase === 'APPROACH') {
+          const p = Math.min(phaseTime / T_APPROACH, 1);
+          // Ease in out
+          const ease = p < 0.5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2;
+          actor.position.z = Z_FAR + (Z_NEAR - Z_FAR) * ease;
+          actor.rotation.y = 0;
+
+          if (phaseTime >= T_APPROACH) {
+            phase = 'ATTACK';
+            phaseTime = 0;
+            actor.position.z = Z_NEAR;
+            setPhaseLabel('Darbe Vuruyor!');
+            playAnim('NORMAL_ATTACK', 0.12, 1.05);
+          }
+        } else if (phase === 'ATTACK') {
+          actor.position.z = Z_NEAR;
+          actor.rotation.y = 0;
+
+          // Impact shudder and rim light burst at swing impact moment
+          if (phaseTime >= 0.65 && phaseTime <= 0.95) {
+            const intensity = (1 - (phaseTime - 0.65) / 0.3);
+            const shake = intensity * 0.035;
+            camera.position.x = initialCamPosRef.current.x + (Math.random() - 0.5) * shake;
+            camera.position.y = initialCamPosRef.current.y + (Math.random() - 0.5) * shake;
+            if (rimLightRef.current) rimLightRef.current.intensity = 5.2;
+          } else {
+            if (rimLightRef.current) rimLightRef.current.intensity = 2.8;
+            camera.position.x = THREE.MathUtils.lerp(camera.position.x, initialCamPosRef.current.x, 0.15);
+            camera.position.y = THREE.MathUtils.lerp(camera.position.y, initialCamPosRef.current.y, 0.15);
+          }
+
+          if (phaseTime >= T_ATTACK) {
+            phase = 'TURN_AWAY';
+            phaseTime = 0;
+            setPhaseLabel('Geriye Dönüyor...');
+            playAnim('RUN', 0.18, 1.1);
+          }
+        } else if (phase === 'TURN_AWAY') {
+          const p = Math.min(phaseTime / T_TURN_AWAY, 1);
+          const ease = p * p * (3 - 2 * p);
+          actor.position.z = Z_NEAR;
+          actor.rotation.y = ease * Math.PI;
+
+          if (phaseTime >= T_TURN_AWAY) {
+            phase = 'RETREAT';
+            phaseTime = 0;
+            actor.rotation.y = Math.PI;
+            setPhaseLabel('Yerine Dönüyor...');
+          }
+        } else if (phase === 'RETREAT') {
+          const p = Math.min(phaseTime / T_RETREAT, 1);
+          const ease = p < 0.5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2;
+          actor.position.z = Z_NEAR + (Z_FAR - Z_NEAR) * ease;
+          actor.rotation.y = Math.PI;
+
+          if (phaseTime >= T_RETREAT) {
+            phase = 'TURN_BACK';
+            phaseTime = 0;
+            actor.position.z = Z_FAR;
+            setPhaseLabel('Hazır Konuma Geçiyor...');
+            playAnim('WAIT', 0.25);
+          }
+        } else if (phase === 'TURN_BACK') {
+          const p = Math.min(phaseTime / T_TURN_BACK, 1);
+          const ease = p * p * (3 - 2 * p);
+          actor.position.z = Z_FAR;
+          actor.rotation.y = Math.PI + ease * Math.PI;
+
+          if (phaseTime >= T_TURN_BACK) {
+            phase = 'IDLE';
+            phaseTime = 0;
+            actor.rotation.y = 0;
+            setPhaseLabel('Nefes Alıyor...');
+          }
+        }
+      }
+
       controls.update();
       renderer.render(scene, camera);
     };
+
     animate();
 
     return () => {
@@ -220,31 +357,37 @@ export function Hero3DViewer({
     };
   }, [modelUrl]);
 
-  // Animation switch
-  const switchAnimation = (animName: string) => {
-    const actions = actionsRef.current;
-    const currentAction = actions[activeAnim];
-    const nextAction = actions[animName];
-
-    if (!nextAction || animName === activeAnim) return;
-
-    if (currentAction) {
-      currentAction.fadeOut(0.2);
+  // Toggle sequence vs manual animation controls
+  const toggleSequence = () => {
+    const nextState = !sequenceActive;
+    setSequenceActive(nextState);
+    if (!nextState && actorGroupRef.current) {
+      // Pause sequence in current position or center it
+      setPhaseLabel('Duraklatıldı (Serbest İnceleme)');
+    } else {
+      setPhaseLabel('Savaş Döngüsü Başlatılıyor...');
     }
-    nextAction.reset().fadeIn(0.2).play();
-    setActiveAnim(animName);
   };
 
-  const toggleAutoRotate = () => {
-    if (controlsRef.current) {
-      controlsRef.current.autoRotate = !autoRotate;
-      setAutoRotate(!autoRotate);
+  const manualAnimation = (animName: string) => {
+    setSequenceActive(false);
+    const actions = actionsRef.current;
+    const current = currentActionRef.current;
+    const next = actions[animName];
+    if (!next) return;
+
+    if (current && current !== next) {
+      current.fadeOut(0.2);
     }
+    next.reset().fadeIn(0.2).play();
+    currentActionRef.current = next;
+    setActiveAnim(animName);
+    setPhaseLabel(`Manuel: ${animName}`);
   };
 
   const resetCamera = () => {
     if (cameraRef.current && controlsRef.current) {
-      cameraRef.current.position.copy(initialPosRef.current);
+      cameraRef.current.position.copy(initialCamPosRef.current);
       controlsRef.current.target.copy(initialTargetRef.current);
       controlsRef.current.update();
     }
@@ -252,91 +395,100 @@ export function Hero3DViewer({
 
   return (
     <div className={`hero-3d-wrapper ${className}`}>
-      {/* 3D WebGL Canvas */}
-      <div className="hero-3d-canvas" ref={mountRef} />
+      {/* Three.js canvas container */}
+      <div ref={mountRef} className="hero-3d-canvas" />
 
-      {/* Loading State */}
+      {/* Loading state */}
       {loading && (
         <div className="hero-3d-loading">
           <div className="hero-3d-spinner" />
-          <span>CANLI 3D MODEL YÜKLENİYOR...</span>
+          <span>VAHŞİ UZMAN YÜKLENİYOR...</span>
         </div>
       )}
 
-      {/* Error State */}
-      {error && (
-        <div className="hero-3d-error">
-          <span>{error}</span>
-        </div>
-      )}
+      {/* Error state */}
+      {error && <div className="hero-3d-error">{error}</div>}
 
-      {/* Atmospheric Boss Badge */}
+      {/* Boss HUD badge */}
       {!loading && !error && (
-        <>
-          <div className="hero-3d-boss-badge">
-            <div className="boss-badge-header">
-              <span className="live-dot" />
-              <span>CANLI 3D OYUN MODELİ</span>
-            </div>
-            <h4>VAHŞİ UZMAN</h4>
-            <div className="boss-badge-meta">
-              <span>Seviye 42 · Elit Düşman</span>
-              <span className="badge-divider">/</span>
-              <span className="loot-highlight">Ganimet: Dolunay Kılıcı</span>
-            </div>
+        <div className="hero-3d-boss-badge">
+          <div className="boss-badge-header">
+            <span className="live-dot" />
+            <span>ELİT DÜŞMAN · LV 42</span>
+          </div>
+          <h4>VAHŞİ UZMAN</h4>
+          <div className="boss-badge-meta">
+            <span>Direnç: Kılıç / Bıçak</span>
+            <span className="badge-divider">·</span>
+            <span className="loot-highlight">Ganimet: Dolunay Kılıcı</span>
+          </div>
+        </div>
+      )}
+
+      {/* HUD Interactive Bar */}
+      {!loading && !error && (
+        <div className="hero-3d-controls-hud">
+          {/* Savaş Döngüsü / Animasyon Kontrolleri */}
+          <div className="anim-switch-group">
+            <button
+              type="button"
+              className={`anim-btn ${sequenceActive ? 'active' : ''}`}
+              onClick={toggleSequence}
+              title="Kameraya yaklaşma, saldırı ve geri çekilme döngüsü"
+            >
+              <span>{sequenceActive ? '⚔️ Canlı Savaş Döngüsü' : '▶ Döngüyü Başlat'}</span>
+              <small style={{ opacity: 0.8, fontSize: '9px', marginLeft: '4px' }}>
+                ({phaseLabel})
+              </small>
+            </button>
+
+            {!sequenceActive && (
+              <>
+                <button
+                  type="button"
+                  className={`anim-btn ${activeAnim === 'WAIT' ? 'active' : ''}`}
+                  onClick={() => manualAnimation('WAIT')}
+                >
+                  Bekle
+                </button>
+                <button
+                  type="button"
+                  className={`anim-btn ${activeAnim === 'NORMAL_ATTACK' ? 'active' : ''}`}
+                  onClick={() => manualAnimation('NORMAL_ATTACK')}
+                >
+                  Saldır
+                </button>
+                <button
+                  type="button"
+                  className={`anim-btn ${activeAnim === 'RUN' ? 'active' : ''}`}
+                  onClick={() => manualAnimation('RUN')}
+                >
+                  Koş
+                </button>
+              </>
+            )}
           </div>
 
-          {/* Interactive HUD Controls */}
-          <div className="hero-3d-controls-hud">
-            {/* Animation Switchers */}
-            <div className="anim-switch-group">
-              {[
-                { key: 'WAIT', label: 'Bekle', icon: '🛡' },
-                { key: 'NORMAL_ATTACK', label: 'Saldır', icon: '⚔' },
-                { key: 'RUN', label: 'Koş', icon: '🏃' },
-              ].map((anim) => {
-                const isSelected = activeAnim === anim.key;
-                return (
-                  <button
-                    key={anim.key}
-                    type="button"
-                    className={`anim-btn ${isSelected ? 'active' : ''}`}
-                    onClick={() => switchAnimation(anim.key)}
-                    title={`${anim.label} animasyonunu başlat`}
-                  >
-                    <span>{anim.icon}</span> {anim.label}
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* Orbit / View Tools */}
-            <div className="view-ctrl-group">
-              <button
-                type="button"
-                className={`ctrl-icon-btn ${autoRotate ? 'active' : ''}`}
-                onClick={toggleAutoRotate}
-                title={autoRotate ? 'Otomatik dönüşü durdur' : 'Otomatik dönüşü başlat'}
-                aria-label="Otomatik dönüşü değiştir"
-              >
-                {autoRotate ? '⏸' : '▶'}
-              </button>
-              <button
-                type="button"
-                className="ctrl-icon-btn"
-                onClick={resetCamera}
-                title="Açıyı sıfırla"
-                aria-label="Kamerayı sıfırla"
-              >
-                ↺
-              </button>
-            </div>
+          {/* Kamera Kontrolleri */}
+          <div className="view-ctrl-group">
+            <button
+              type="button"
+              className="ctrl-icon-btn"
+              onClick={resetCamera}
+              title="Kamerayı Varsayılana Sıfırla"
+              aria-label="Kamera Sıfırla"
+            >
+              ↺
+            </button>
           </div>
+        </div>
+      )}
 
-          <div className="hero-3d-hint">
-            <span>🖱 360° Çevirmek için sürükle · Yakınlaştır</span>
-          </div>
-        </>
+      {/* Interaction tip */}
+      {!loading && !error && (
+        <div className="hero-3d-hint">
+          <span>Fare ile 360° döndürebilirsiniz</span>
+        </div>
       )}
     </div>
   );
