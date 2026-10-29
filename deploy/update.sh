@@ -32,6 +32,11 @@ if [ -f "$release/deploy/setup-model-downloader.sh" ]; then
   }
 fi
 
+# Oyun sunucusunun maç / oturum günlükleri (kale2 deploy_server.sh kurar): panel dakikada bir veritabanına aktarır
+if [ -d /var/lib/metin3/matchlogs ] && ! grep -q '^MATCH_LOG_DIR=' "$base/shared/app.env"; then
+  echo 'MATCH_LOG_DIR=/var/lib/metin3/matchlogs' >> "$base/shared/app.env"
+fi
+
 install -m 644 "$release/deploy/kale-savaslari.service" /etc/systemd/system/kale-savaslari.service
 systemctl daemon-reload
 systemctl restart kale-savaslari.service
