@@ -474,6 +474,14 @@ export function ProfilePage() {
                 </div>
               </div>
 
+              <Link
+                to="/game"
+                className="button button-red"
+                style={{ width: '100%', textAlign: 'center', marginBottom: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '12px', fontSize: '13.5px' }}
+              >
+                <span>🎮</span> 3D KARAKTERİ YÖNET & ENVANTER (WASD) ↗
+              </Link>
+
               {/* Seçili Sınıf & Değiştirme */}
               <div className="profile-section-block">
                 <h4>UZMANLIK SINIFIN</h4>

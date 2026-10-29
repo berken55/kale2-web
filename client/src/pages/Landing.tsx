@@ -456,6 +456,9 @@ export function LandingPage() {
           <a href="#siralama" onClick={() => setMenuOpen(false)}>
             Sıralama
           </a>
+          <Link to="/game" onClick={() => setMenuOpen(false)}>
+            🎮 3D Oyun
+          </Link>
           <Link to="/feedback" onClick={() => setMenuOpen(false)}>
             Beta Geri Bildirim
           </Link>
