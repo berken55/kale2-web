@@ -15,7 +15,7 @@ import {
 import type { BonusType, DashboardStats } from '../shared/types.ts';
 import { authRouter, requireAuth, type AuthConfig } from './auth.ts';
 import { registerAccount, getAccountCount, listAccounts } from './accounts.ts';
-import { listMatches, getMatchDetail, listSessions, getMatchStats } from './matches.ts';
+import { listMatches, getMatchDetail, listSessions, getMatchStats, getLeaderboard } from './matches.ts';
 import { importMatchLogs } from './match-logs.ts';
 import { logActivity, type DB } from './db.ts';
 import { dropsRouter, dropUsageOfItem } from './drops.ts';
@@ -188,6 +188,11 @@ export function createApp({ db, uploadDir, auth, clientDir, publicWiki = true, i
     res.json({
       totalPlayers: getAccountCount(db),
     });
+  });
+
+  api.get('/public/leaderboard', (req, res) => {
+    const limit = Math.min(50, Math.max(1, Number(req.query.limit) || 10));
+    res.json(getLeaderboard(db, limit));
   });
 
   api.use('/auth', authRouter(auth));

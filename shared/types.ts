@@ -493,3 +493,20 @@ export interface MatchStats {
   uniquePlayers: number;
   activeSessions: number;
 }
+
+export interface LeaderboardEntry {
+  rank: number;
+  playerName: string;
+  class: string;
+  spec: string;
+  matchesPlayed: number;
+  wins: number;
+  winRate: number;
+  kills: number;
+  deaths: number;
+  assists: number;
+  kda: string;
+  totalHeroDamage: number;
+  maxLevel: number;
+  tier: 'champion' | 'master' | 'diamond' | 'gold' | 'silver';
+}

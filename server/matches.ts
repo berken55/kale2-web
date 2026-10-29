@@ -1,4 +1,5 @@
 import type { DB } from './db.ts';
+import type { LeaderboardEntry } from '../shared/types.ts';
 
 export interface MatchFilterOptions {
   status?: string;
@@ -295,4 +296,107 @@ export function getMatchStats(db: DB) {
     uniquePlayers: Number(sessionStats?.uniquePlayers ?? 0),
     activeSessions: Number(sessionStats?.activeSessions ?? 0),
   };
+}
+
+const DEMO_LEADERBOARD = [
+  { playerName: 'AlpArslan', class: 'warrior', spec: 'warrior_body', matchesPlayed: 32, wins: 26, kills: 164, deaths: 31, assists: 98, totalHeroDamage: 96400, maxLevel: 15 },
+  { playerName: 'GeceAvcisi', class: 'ninja', spec: 'ninja_dagger', matchesPlayed: 29, wins: 22, kills: 182, deaths: 39, assists: 52, totalHeroDamage: 104200, maxLevel: 15 },
+  { playerName: 'GokBoru', class: 'warrior', spec: 'warrior_mental', matchesPlayed: 26, wins: 20, kills: 112, deaths: 21, assists: 134, totalHeroDamage: 88100, maxLevel: 14 },
+  { playerName: 'AyKiz', class: 'ninja', spec: 'ninja_bow', matchesPlayed: 24, wins: 18, kills: 145, deaths: 26, assists: 76, totalHeroDamage: 92300, maxLevel: 14 },
+  { playerName: 'KaraSancak', class: 'warrior', spec: 'warrior_body', matchesPlayed: 21, wins: 15, kills: 104, deaths: 28, assists: 83, totalHeroDamage: 77500, maxLevel: 13 },
+  { playerName: 'SonSamuray', class: 'ninja', spec: 'ninja_dagger', matchesPlayed: 19, wins: 13, kills: 98, deaths: 33, assists: 56, totalHeroDamage: 74200, maxLevel: 13 },
+  { playerName: 'DemirYurek', class: 'warrior', spec: 'warrior_mental', matchesPlayed: 17, wins: 12, kills: 73, deaths: 22, assists: 95, totalHeroDamage: 64800, maxLevel: 12 },
+  { playerName: 'Pusat', class: 'warrior', spec: 'warrior_body', matchesPlayed: 15, wins: 10, kills: 78, deaths: 29, assists: 58, totalHeroDamage: 66100, maxLevel: 11 },
+  { playerName: 'RuzgarBicagi', class: 'ninja', spec: 'ninja_bow', matchesPlayed: 14, wins: 9, kills: 69, deaths: 28, assists: 44, totalHeroDamage: 59300, maxLevel: 11 },
+  { playerName: 'GolgeHukumdar', class: 'warrior', spec: 'warrior_mental', matchesPlayed: 12, wins: 8, kills: 56, deaths: 21, assists: 71, totalHeroDamage: 53200, maxLevel: 10 },
+];
+
+export function getLeaderboard(db: DB, limit: number = 10): LeaderboardEntry[] {
+  const rows = db
+    .prepare(
+      `SELECT 
+        mp.player_name as playerName,
+        MAX(mp.class) as class,
+        MAX(mp.spec) as spec,
+        COUNT(DISTINCT mp.match_id) as matchesPlayed,
+        SUM(COALESCE(mp.kills, 0)) as kills,
+        SUM(COALESCE(mp.deaths, 0)) as deaths,
+        SUM(COALESCE(mp.assists, 0)) as assists,
+        SUM(CASE WHEN mp.won = 1 THEN 1 ELSE 0 END) as wins,
+        ROUND(SUM(COALESCE(mp.dmg_hero, 0)), 0) as totalHeroDamage,
+        MAX(COALESCE(mp.level_end, 1)) as maxLevel
+      FROM match_players mp
+      GROUP BY mp.player_name
+      ORDER BY wins DESC, kills DESC, totalHeroDamage DESC
+      LIMIT ?`,
+    )
+    .all(limit) as Array<Record<string, unknown>>;
+
+  const combinedMap = new Map<string, any>();
+
+  for (const r of rows) {
+    const pName = String(r.playerName);
+    combinedMap.set(pName.toLowerCase(), {
+      playerName: pName,
+      class: String(r.class || 'warrior'),
+      spec: String(r.spec || 'warrior_body'),
+      matchesPlayed: Number(r.matchesPlayed || 0),
+      wins: Number(r.wins || 0),
+      kills: Number(r.kills || 0),
+      deaths: Number(r.deaths || 0),
+      assists: Number(r.assists || 0),
+      totalHeroDamage: Number(r.totalHeroDamage || 0),
+      maxLevel: Number(r.maxLevel || 1),
+    });
+  }
+
+  // Eğer veritabanında henüz az oyuncu varsa listeyi demo liderlerle tamamla
+  if (combinedMap.size < limit) {
+    for (const demo of DEMO_LEADERBOARD) {
+      if (!combinedMap.has(demo.playerName.toLowerCase())) {
+        combinedMap.set(demo.playerName.toLowerCase(), { ...demo });
+        if (combinedMap.size >= limit) break;
+      }
+    }
+  }
+
+  const sorted = Array.from(combinedMap.values()).sort((a, b) => {
+    if (b.wins !== a.wins) return b.wins - a.wins;
+    if (b.kills !== a.kills) return b.kills - a.kills;
+    return b.totalHeroDamage - a.totalHeroDamage;
+  });
+
+  return sorted.slice(0, limit).map((p, idx) => {
+    const rank = idx + 1;
+    const matches = Math.max(1, p.matchesPlayed);
+    const winRate = Math.round((p.wins / matches) * 100);
+    const deaths = p.deaths || 0;
+    const kda =
+      deaths > 0
+        ? ((p.kills + p.assists) / deaths).toFixed(2)
+        : String((p.kills + p.assists) || 0);
+
+    let tier: LeaderboardEntry['tier'] = 'silver';
+    if (rank <= 3) tier = 'champion';
+    else if (rank <= 6) tier = 'master';
+    else if (rank <= 8) tier = 'diamond';
+    else if (rank <= 10) tier = 'gold';
+
+    return {
+      rank,
+      playerName: p.playerName,
+      class: p.class,
+      spec: p.spec,
+      matchesPlayed: p.matchesPlayed,
+      wins: p.wins,
+      winRate,
+      kills: p.kills,
+      deaths: p.deaths,
+      assists: p.assists,
+      kda,
+      totalHeroDamage: p.totalHeroDamage,
+      maxLevel: p.maxLevel,
+      tier,
+    };
+  });
 }

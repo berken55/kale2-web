@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from 
 import { Link } from 'react-router-dom';
 import { HERO_VIDEO_SRC } from '../heroVideo';
 import { Hero3DViewer } from '../components/Hero3DViewer';
+import type { LeaderboardEntry } from '@shared/types';
 import '../marketing.css';
 
 /* Karakter verileri */
@@ -173,6 +174,8 @@ export function LandingPage() {
     createdAt: string;
   } | null>(null);
   const [totalPlayers, setTotalPlayers] = useState<number | null>(null);
+  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
+  const [leaderboardLoading, setLeaderboardLoading] = useState(true);
 
   /* Sayfa başlığı, kayıtlı oyuncu sayısı ve hesap geri yükleme */
   useEffect(() => {
@@ -187,6 +190,17 @@ export function LandingPage() {
         }
       })
       .catch(() => {});
+
+    // Canlı liderlik tablosunu çek
+    fetch('/api/public/leaderboard?limit=10')
+      .then((res) => res.json())
+      .then((data) => {
+        if (Array.isArray(data)) {
+          setLeaderboard(data);
+        }
+      })
+      .catch(() => {})
+      .finally(() => setLeaderboardLoading(false));
 
     // Bu tarayıcıda daha önce açılmış hesap varsa yükle
     try {
@@ -439,6 +453,9 @@ export function LandingPage() {
           <a href="#galeri" onClick={() => setMenuOpen(false)}>
             Dünyayı keşfet
           </a>
+          <a href="#siralama" onClick={() => setMenuOpen(false)}>
+            Sıralama
+          </a>
           <Link to="/wiki" onClick={() => setMenuOpen(false)}>
             Wiki
           </Link>
@@ -489,11 +506,11 @@ export function LandingPage() {
               Son sözü rakibin kalesinde söyle.
             </p>
             <div className="hero-actions">
-              <a className="button button-red" href="#savas">
-                SAVAŞI KEŞFET <span aria-hidden="true">↗</span>
+              <a className="button button-red" href="#gelecek">
+                HESABINI OLUŞTUR / KAYIT OL <span aria-hidden="true">↗</span>
               </a>
-              <a className="button button-ghost" href="#fragman">
-                <span className="play-icon" aria-hidden="true">▶</span> FRAGMANI İZLE
+              <a className="button button-ghost" href="#siralama">
+                <span aria-hidden="true">🏆</span> SIRALAMA
               </a>
             </div>
           </div>
@@ -1406,6 +1423,131 @@ export function LandingPage() {
                 <i aria-hidden="true">↗</i>
               </span>
             </button>
+          </div>
+        </section>
+
+        {/* Sıralama / Sezon Liderlik Tablosu */}
+        <section className="leaderboard section-pad" id="siralama">
+          <div className="section-kicker">
+            <span>SEZON LİDERLİK TABLOSU</span>
+            <span>EN İYİ SAVAŞÇILAR / CANLI VERİ</span>
+          </div>
+
+          <div className="leaderboard-intro">
+            <p className="eyebrow">
+              <span className="live-dot" /> CANLI İSTATİSTİKLER & MAÇ GEÇMİŞİ
+            </p>
+            <h2>
+              KALE2'NİN EFSANELERİ.
+              <br />
+              <em>KİM DAHA GÜÇLÜ?</em>
+            </h2>
+            <p className="leaderboard-desc">
+              Vadideki resmi maç verileriyle hesaplanan güncel oyuncu sıralaması. Her zafer, her katletme ve her asist puanına yansır.
+            </p>
+          </div>
+
+          {/* Top 3 Podyum Kartları */}
+          <div className="leaderboard-podium">
+            {leaderboard.slice(0, 3).map((player) => (
+              <div
+                key={player.playerName}
+                className={`podium-card rank-${player.rank} ${player.tier}`}
+              >
+                <div className="podium-badge">
+                  {player.rank === 1 ? '👑 1. ŞAMPİYON' : player.rank === 2 ? '⚔ 2. USTA' : '🛡 3. KIDEMLİ'}
+                </div>
+                <div className="podium-avatar">
+                  <span className="avatar-class-tag">{player.class === 'ninja' ? 'N' : 'S'}</span>
+                </div>
+                <h3 className="podium-name">{player.playerName}</h3>
+                <span className="podium-spec">
+                  {player.class === 'warrior'
+                    ? player.spec === 'warrior_mental' ? 'Zihinsel Savaşçı' : 'Bedensel Savaşçı'
+                    : player.spec === 'ninja_bow' ? 'Uzak Dövüş Ninja' : 'Yakın Dövüş Ninja'}
+                  {' '}(Lv. {player.maxLevel})
+                </span>
+
+                <div className="podium-stats">
+                  <div className="pod-stat">
+                    <span>KAZANMA</span>
+                    <strong>%{player.winRate}</strong>
+                  </div>
+                  <div className="pod-stat">
+                    <span>KDA</span>
+                    <strong>{player.kda}</strong>
+                  </div>
+                  <div className="pod-stat">
+                    <span>KATLETME</span>
+                    <strong>{player.kills}</strong>
+                  </div>
+                  <div className="pod-stat">
+                    <span>MAÇ</span>
+                    <strong>{player.wins}G / {player.matchesPlayed}M</strong>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Tam Sıralama Tablosu */}
+          <div className="leaderboard-table-wrap">
+            <table className="leaderboard-table">
+              <thead>
+                <tr>
+                  <th>SIRA</th>
+                  <th>SAVAŞÇI</th>
+                  <th>SINIF</th>
+                  <th>KAZANMA ORANI</th>
+                  <th>K / D / A</th>
+                  <th>HASAR</th>
+                  <th>KADEME</th>
+                </tr>
+              </thead>
+              <tbody>
+                {leaderboard.map((p) => (
+                  <tr key={p.playerName} className={p.rank <= 3 ? 'top-tier' : ''}>
+                    <td className="rank-cell">
+                      <span className={`rank-num rank-${p.rank}`}>#{p.rank}</span>
+                    </td>
+                    <td className="player-cell">
+                      <strong>{p.playerName}</strong>
+                      <small>Seviye {p.maxLevel}</small>
+                    </td>
+                    <td className="class-cell">
+                      <span className={`badge-class ${p.class}`}>
+                        {p.class === 'warrior' ? 'Savaşçı' : 'Ninja'}
+                      </span>
+                    </td>
+                    <td className="winrate-cell">
+                      <div className="winrate-bar-wrap">
+                        <div className="winrate-bar" style={{ width: `${p.winRate}%` }} />
+                      </div>
+                      <span>%{p.winRate} <small>({p.wins}G / {p.matchesPlayed}M)</small></span>
+                    </td>
+                    <td className="kda-cell">
+                      <strong>{p.kda}</strong>
+                      <small>{p.kills} / {p.deaths} / {p.assists}</small>
+                    </td>
+                    <td className="damage-cell">
+                      {p.totalHeroDamage.toLocaleString('tr-TR')}
+                    </td>
+                    <td className="tier-cell">
+                      <span className={`badge-tier ${p.tier}`}>
+                        {p.tier === 'champion' ? 'ŞAMPİYON' : p.tier === 'master' ? 'USTA' : p.tier === 'diamond' ? 'ELMAS' : 'ALTIN'}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="leaderboard-cta">
+            <p>Sıralamada yerini almak ve efsaneler arasına girmek için hemen savaşa başla!</p>
+            <a href="#gelecek" className="button button-red">
+              HESABINI AÇ & SIRALAMAYA GİR <span aria-hidden="true">↗</span>
+            </a>
           </div>
         </section>
 

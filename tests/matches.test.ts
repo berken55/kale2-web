@@ -75,4 +75,18 @@ describe('maç ve oturum API uç noktaları', () => {
     expect(filtered.body.sessions[0].playerName).toBe('Ayse');
     expect(filtered.body.sessions[0].class).toBe('warrior');
   });
+  it('herkese açık lider tablosunu (leaderboard) getirir', async () => {
+    const { app } = await setup();
+    const res = await request(app).get('/api/public/leaderboard').expect(200);
+
+    expect(Array.isArray(res.body)).toBe(true);
+    expect(res.body.length).toBeGreaterThanOrEqual(10);
+    const top = res.body[0];
+    expect(top).toHaveProperty('rank', 1);
+    expect(top).toHaveProperty('playerName');
+    expect(top).toHaveProperty('wins');
+    expect(top).toHaveProperty('winRate');
+    expect(top).toHaveProperty('kda');
+    expect(top).toHaveProperty('tier');
+  });
 });
