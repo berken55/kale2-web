@@ -17,9 +17,6 @@ export function Hero3DViewer({
   const mountRef = useRef<HTMLDivElement>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeAnim, setActiveAnim] = useState<string>('WAIT');
-  const [sequenceActive, setSequenceActive] = useState<boolean>(true);
-  const [phaseLabel, setPhaseLabel] = useState<string>('Nefes Alıyor...');
 
   const controlsRef = useRef<OrbitControls | null>(null);
   const mixerRef = useRef<THREE.AnimationMixer | null>(null);
@@ -31,12 +28,6 @@ export function Hero3DViewer({
 
   const initialCamPosRef = useRef<THREE.Vector3>(new THREE.Vector3(0, 0.05, 3.5));
   const initialTargetRef = useRef<THREE.Vector3>(new THREE.Vector3(0, 0, 0));
-  const sequenceActiveRef = useRef<boolean>(true);
-
-  // Sync ref with state
-  useEffect(() => {
-    sequenceActiveRef.current = sequenceActive;
-  }, [sequenceActive]);
 
   useEffect(() => {
     const mount = mountRef.current;
@@ -72,7 +63,7 @@ export function Hero3DViewer({
     renderer.toneMappingExposure = 1.3;
     mount.appendChild(renderer.domElement);
 
-    // 4. Atmospheric Lights (No platform beneath, pure floating character lighting)
+    // 4. Atmospheric Lights
     const ambientLight = new THREE.HemisphereLight(0xffedd5, 0x0e120f, 2.2);
     scene.add(ambientLight);
 
@@ -102,7 +93,7 @@ export function Hero3DViewer({
     scene.add(actorGroup);
     actorGroupRef.current = actorGroup;
 
-    // 6. OrbitControls (auto-rotate disabled by default so the monster runs directly towards the user)
+    // 6. OrbitControls (interactive drag enabled, autoRotate disabled)
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
     controls.dampingFactor = 0.06;
@@ -135,7 +126,6 @@ export function Hero3DViewer({
       }
 
       currentActionRef.current = targetAction;
-      setActiveAnim(clipName);
     };
 
     // 7. Load GLTF Model
@@ -248,8 +238,8 @@ export function Hero3DViewer({
 
       mixerRef.current?.update(delta);
 
-      // Cinematic sequence state machine
-      if (sequenceActiveRef.current && actorGroupRef.current) {
+      // Continuous cinematic sequence state machine
+      if (actorGroupRef.current) {
         phaseTime += delta;
         const actor = actorGroupRef.current;
 
@@ -259,7 +249,6 @@ export function Hero3DViewer({
           if (phaseTime >= T_IDLE) {
             phase = 'APPROACH';
             phaseTime = 0;
-            setPhaseLabel('Kameraya Yaklaşıyor...');
             playAnim('RUN', 0.25, 1.15);
           }
         } else if (phase === 'APPROACH') {
@@ -273,7 +262,6 @@ export function Hero3DViewer({
             phase = 'ATTACK';
             phaseTime = 0;
             actor.position.z = Z_NEAR;
-            setPhaseLabel('Darbe Vuruyor!');
             playAnim('NORMAL_ATTACK', 0.12, 1.05);
           }
         } else if (phase === 'ATTACK') {
@@ -282,7 +270,7 @@ export function Hero3DViewer({
 
           // Impact shudder and rim light burst at swing impact moment
           if (phaseTime >= 0.65 && phaseTime <= 0.95) {
-            const intensity = (1 - (phaseTime - 0.65) / 0.3);
+            const intensity = 1 - (phaseTime - 0.65) / 0.3;
             const shake = intensity * 0.035;
             camera.position.x = initialCamPosRef.current.x + (Math.random() - 0.5) * shake;
             camera.position.y = initialCamPosRef.current.y + (Math.random() - 0.5) * shake;
@@ -296,7 +284,6 @@ export function Hero3DViewer({
           if (phaseTime >= T_ATTACK) {
             phase = 'TURN_AWAY';
             phaseTime = 0;
-            setPhaseLabel('Geriye Dönüyor...');
             playAnim('RUN', 0.18, 1.1);
           }
         } else if (phase === 'TURN_AWAY') {
@@ -309,7 +296,6 @@ export function Hero3DViewer({
             phase = 'RETREAT';
             phaseTime = 0;
             actor.rotation.y = Math.PI;
-            setPhaseLabel('Yerine Dönüyor...');
           }
         } else if (phase === 'RETREAT') {
           const p = Math.min(phaseTime / T_RETREAT, 1);
@@ -321,7 +307,6 @@ export function Hero3DViewer({
             phase = 'TURN_BACK';
             phaseTime = 0;
             actor.position.z = Z_FAR;
-            setPhaseLabel('Hazır Konuma Geçiyor...');
             playAnim('WAIT', 0.25);
           }
         } else if (phase === 'TURN_BACK') {
@@ -334,7 +319,6 @@ export function Hero3DViewer({
             phase = 'IDLE';
             phaseTime = 0;
             actor.rotation.y = 0;
-            setPhaseLabel('Nefes Alıyor...');
           }
         }
       }
@@ -357,42 +341,6 @@ export function Hero3DViewer({
     };
   }, [modelUrl]);
 
-  // Toggle sequence vs manual animation controls
-  const toggleSequence = () => {
-    const nextState = !sequenceActive;
-    setSequenceActive(nextState);
-    if (!nextState && actorGroupRef.current) {
-      // Pause sequence in current position or center it
-      setPhaseLabel('Duraklatıldı (Serbest İnceleme)');
-    } else {
-      setPhaseLabel('Savaş Döngüsü Başlatılıyor...');
-    }
-  };
-
-  const manualAnimation = (animName: string) => {
-    setSequenceActive(false);
-    const actions = actionsRef.current;
-    const current = currentActionRef.current;
-    const next = actions[animName];
-    if (!next) return;
-
-    if (current && current !== next) {
-      current.fadeOut(0.2);
-    }
-    next.reset().fadeIn(0.2).play();
-    currentActionRef.current = next;
-    setActiveAnim(animName);
-    setPhaseLabel(`Manuel: ${animName}`);
-  };
-
-  const resetCamera = () => {
-    if (cameraRef.current && controlsRef.current) {
-      cameraRef.current.position.copy(initialCamPosRef.current);
-      controlsRef.current.target.copy(initialTargetRef.current);
-      controlsRef.current.update();
-    }
-  };
-
   return (
     <div className={`hero-3d-wrapper ${className}`}>
       {/* Three.js canvas container */}
@@ -409,7 +357,7 @@ export function Hero3DViewer({
       {/* Error state */}
       {error && <div className="hero-3d-error">{error}</div>}
 
-      {/* Boss HUD badge */}
+      {/* Clean Boss Badge (Dolunay Kılıcı kaldırıldı) */}
       {!loading && !error && (
         <div className="hero-3d-boss-badge">
           <div className="boss-badge-header">
@@ -417,77 +365,6 @@ export function Hero3DViewer({
             <span>ELİT DÜŞMAN · LV 42</span>
           </div>
           <h4>VAHŞİ UZMAN</h4>
-          <div className="boss-badge-meta">
-            <span>Direnç: Kılıç / Bıçak</span>
-            <span className="badge-divider">·</span>
-            <span className="loot-highlight">Ganimet: Dolunay Kılıcı</span>
-          </div>
-        </div>
-      )}
-
-      {/* HUD Interactive Bar */}
-      {!loading && !error && (
-        <div className="hero-3d-controls-hud">
-          {/* Savaş Döngüsü / Animasyon Kontrolleri */}
-          <div className="anim-switch-group">
-            <button
-              type="button"
-              className={`anim-btn ${sequenceActive ? 'active' : ''}`}
-              onClick={toggleSequence}
-              title="Kameraya yaklaşma, saldırı ve geri çekilme döngüsü"
-            >
-              <span>{sequenceActive ? '⚔️ Canlı Savaş Döngüsü' : '▶ Döngüyü Başlat'}</span>
-              <small style={{ opacity: 0.8, fontSize: '9px', marginLeft: '4px' }}>
-                ({phaseLabel})
-              </small>
-            </button>
-
-            {!sequenceActive && (
-              <>
-                <button
-                  type="button"
-                  className={`anim-btn ${activeAnim === 'WAIT' ? 'active' : ''}`}
-                  onClick={() => manualAnimation('WAIT')}
-                >
-                  Bekle
-                </button>
-                <button
-                  type="button"
-                  className={`anim-btn ${activeAnim === 'NORMAL_ATTACK' ? 'active' : ''}`}
-                  onClick={() => manualAnimation('NORMAL_ATTACK')}
-                >
-                  Saldır
-                </button>
-                <button
-                  type="button"
-                  className={`anim-btn ${activeAnim === 'RUN' ? 'active' : ''}`}
-                  onClick={() => manualAnimation('RUN')}
-                >
-                  Koş
-                </button>
-              </>
-            )}
-          </div>
-
-          {/* Kamera Kontrolleri */}
-          <div className="view-ctrl-group">
-            <button
-              type="button"
-              className="ctrl-icon-btn"
-              onClick={resetCamera}
-              title="Kamerayı Varsayılana Sıfırla"
-              aria-label="Kamera Sıfırla"
-            >
-              ↺
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Interaction tip */}
-      {!loading && !error && (
-        <div className="hero-3d-hint">
-          <span>Fare ile 360° döndürebilirsiniz</span>
         </div>
       )}
     </div>
